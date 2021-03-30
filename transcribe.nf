@@ -1,10 +1,12 @@
 #!/usr/bin/env nextflow
 
-params.in = "$HOME/src-audio/test.mp3"
+params.in = "/opt/speechfiles/test.mp3"
 params.do_music_detection = "no" // yes or no 
 params.fileext = "mp3"
 params.srcdir = "/home/aivo_olevi/dev/kaldi-offline-transcriber"
-params.acoustic_model = ""
+params.acoustic_model = "tdnn_7d_online"
+params.njobs = 1
+params.decode_cmd = "run.pl"
 audio_file = file(params.in)
 
 process transcribe {
@@ -22,6 +24,7 @@ process transcribe {
 
     else if( params.fileext == 'mp3' || params.fileext == 'm4a' || params.fileext == 'mp4' )
         """
+        ls -l /opt/speechfiles/
         ffmpeg -i $params.in -f sox - | sox -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k	
         """
 
@@ -78,15 +81,15 @@ process reco2file_and_channel {
 
 process segments {
     input:
-    file show_seg from show_seg
-    file reco2file_and_channel from reco2file_and_channel
+    file show_seg
+    file reco2file_and_channel
 
     output:
     file 'segments' into segments
 
     script:
     """
-    cat $show_seg | cut -f 3,4,8 -d " " | \
+    cat $show_seg | cut -f "3,4,8" -d " " | \
 	while read LINE ; do \
 		start=`echo \$LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); \$start=\$t[0]/100.0; printf("%08.3f", \$start);'`; \
 		end=`echo \$LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); \$start=\$t[0]/100.0; \$len=\$t[1]/100.0; \$end=\$start+\$len; printf("%08.3f", \$end);'`; \
@@ -125,20 +128,29 @@ process spk2utt {
     """
     WORK_DIR=\$PWD
     cd $params.srcdir
-    utils/utt2spk_to_spk2utt.pl \${WORK_DIR}/$utt2spk > spk2utt
+    utils/utt2spk_to_spk2utt.pl \${WORK_DIR}/$utt2spk > \${WORK_DIR}/spk2utt
     """
 }
 
 process mfcc {
     input:
     file spk2utt
+    file utt2spk
+    file scp
+    file segments
+    file audio
 
     script:
     """
-    steps/make_mfcc.sh --mfcc-config build/fst/$(ACOUSTIC_MODEL)/conf/mfcc.conf --cmd "$$decode_cmd" --nj $(njobs) \
-		build/trans/$* build/trans/$*/exp/make_mfcc $@ || exit 1
-	steps/compute_cmvn_stats.sh build/trans/$* build/trans/$*/exp/make_mfcc $@ || exit 1
-	utils/fix_data_dir.sh build/trans/$*
+    WORK_DIR=\$PWD
+    cd $params.srcdir
+    steps/make_mfcc.sh \
+        --mfcc-config build/fst/${params.acoustic_model}/conf/mfcc.conf \
+        --cmd ${params.decode_cmd} \
+        --nj ${params.njobs} \
+        \$WORK_DIR || exit 1
+	steps/compute_cmvn_stats.sh $audio make_mfcc mfcc || exit 1
+	utils/fix_data_dir.sh $audio
     """
 }
 
