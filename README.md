@@ -11,5 +11,8 @@ directory `~/tmp/speechfiles` as the container directory `/opt/speechfiles`.
     mkdir -p ~/tmp/speechfiles
     docker run --name nextflow -v ~/tmp/speechfiles:/opt/speechfiles --rm -d -t nextflow:latest
 
+Install Nextflow locally:
+    wget -qO- https://get.nextflow.io | bash
+
 To transcribe:
-    docker exec -it nextflow /opt/kaldi-offline-transcriber/nextflow run /opt/kaldi-offline-transcriber/transcribe.nf
+    nextflow run transcribe.nf -with-docker nextflow -resume
