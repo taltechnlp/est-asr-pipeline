@@ -9,6 +9,8 @@ params.njobs = 1
 params.nthreads = 1
 params.decode_cmd = "run.pl"
 params.kaldi_root = "/opt/kaldi"
+params.et_g2p_fst = "/opt/et-g2p-fst"
+params.lm_scale = 10
 audio_file = file(params.in)
 
 
@@ -206,7 +208,10 @@ process one_pass_decoding {
 process restore_lattices {
     // Rescore lattices with a larger language model
     input: 
-    path pruned from pruned_unk
+    path pruned_unk from pruned_unk
+
+    output:
+    path "${params.acoustic_model}_pruned_rescored_main_unk*" into pruned_rescored_unk
 
     script:
     """
@@ -222,5 +227,95 @@ process restore_lattices {
 	  . \
 	  ${params.acoustic_model}_pruned_unk/decode ${params.acoustic_model}_pruned_rescored_main_unk/decode || exit 1;
 	cp -r --preserve=links ${params.acoustic_model}_pruned_unk/graph ${params.acoustic_model}_pruned_rescored_main_unk	
+    """
+}
+
+process main_rnnlm {
+    input:
+    path pruned_unk from pruned_unk
+    path pruned_rescored_unk from pruned_rescored_unk
+
+    output:
+    path "${params.acoustic_model}_pruned_rescored_main_rnnlm_unk*" into main_rnnlm
+
+    script:
+    """
+    ln -s ${params.kaldi_root}/egs/wsj/s5/rnnlm
+    ln -s ${params.kaldi_root}/egs/wsj/s5/steps
+    ln -s ${params.kaldi_root}/egs/wsj/s5/utils
+    ln -s ${params.kaldi_root}/egs/wsj/s5/local
+    ln -s ${params.srcdir}/build
+    
+    mkdir -p ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk
+	(cd ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk; for f in ${params.srcdir}/build/fst/${params.acoustic_model}/*; do ln -s \$f; done)
+	rnnlm/lmrescore_pruned.sh \
+	    --skip-scoring true \
+	    --max-ngram-order 4 \
+      build/fst/data/largelm_unk \
+      build/fst/data/rnnlm_unk \
+      . \
+	  ${params.acoustic_model}_pruned_rescored_main_unk/decode \
+      ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk/decode
+	cp -r --preserve=links ${params.acoustic_model}_pruned_unk/graph ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk/
+    """
+}
+
+process decode {
+    input:
+    path main_rnnlm from main_rnnlm
+
+    script:
+    """
+    ln -s ${params.kaldi_root}/egs/wsj/s5/rnnlm
+    ln -s ${params.kaldi_root}/egs/wsj/s5/steps
+    ln -s ${params.kaldi_root}/egs/wsj/s5/utils
+    ln -s ${params.kaldi_root}/egs/wsj/s5/local
+    ln -s ${params.srcdir}/build
+    
+    frame_shift_opt=""; \
+	if [ -f ${main_rnnlm}/frame_subsampling_factor ]; then \
+	  factor=`cat ${main_rnnlm}/frame_subsampling_factor`; \
+	  frame_shift_opt=\"--frame-shift 0.0\$factor\"; \
+	fi; \
+	steps/get_ctm.sh \$frame_shift_opt . ${main_rnnlm}/graph ${main_rnnlm}/decode
+    """
+}
+
+process decode_unk {
+    input:
+    path main_rnnlm from main_rnnlm
+
+    output:
+    path "${params.acoustic_model}_pruned_rescored_main_rnnlm_unk*" into rnnlm_decode_unk
+
+    script:
+    """
+    ln -s ${params.kaldi_root}/egs/wsj/s5/rnnlm
+    ln -s ${params.kaldi_root}/egs/wsj/s5/steps
+    ln -s ${params.kaldi_root}/egs/wsj/s5/utils
+    ln -s ${params.kaldi_root}/egs/wsj/s5/local
+    ln -s ${params.srcdir}/build
+    
+	frame_shift_opt=""; \
+	if [ -f  ${main_rnnlm}/frame_subsampling_factor ]; then \
+	  factor=`cat ${main_rnnlm}/frame_subsampling_factor`; \
+	  frame_shift_opt=\"--frame-shift 0.0\$factor\"; \
+	fi; \
+	${params.srcdir}/local/get_ctm_unk.sh --use_segments false \$frame_shift_opt \
+	  --unk-p2g-cmd \"python3 ${params.srcdir}/local/unk_p2g.py --p2g-cmd \'python3 ${params.et_g2p_fst}/g2p.py --inverse --fst  ${params.et_g2p_fst}/data/chars.fst --nbest 1\'\" \
+	  --unk-word \'<unk>\' \
+	  --min-lmwt ${params.lm_scale} \
+	  --max-lmwt ${params.lm_scale} \
+	  . ${main_rnnlm}/graph ${main_rnnlm}/decode
+    """
+}
+
+process splitw2 {
+    input:
+    path rnnlm_decode_unk from rnnlm_decode_unk
+
+    script:
+    """
+    cat ${rnnlm_decode_unk}/decode/score_${params.lm_scale}/audio.ctm  | perl -npe \'s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/\' > segmented.splitw2.ctm
     """
 }
