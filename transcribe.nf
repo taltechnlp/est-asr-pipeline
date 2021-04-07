@@ -264,6 +264,9 @@ process decode {
     input:
     path main_rnnlm from main_rnnlm
 
+    output:
+    file 'segmented.ctm' into segmented_ctm
+
     script:
     """
     ln -s ${params.kaldi_root}/egs/wsj/s5/rnnlm
@@ -271,6 +274,7 @@ process decode {
     ln -s ${params.kaldi_root}/egs/wsj/s5/utils
     ln -s ${params.kaldi_root}/egs/wsj/s5/local
     ln -s ${params.srcdir}/build
+    ln -s ${params.srcdir}/scripts
     
     frame_shift_opt=""; \
 	if [ -f ${main_rnnlm}/frame_subsampling_factor ]; then \
@@ -278,23 +282,6 @@ process decode {
 	  frame_shift_opt=\"--frame-shift 0.0\$factor\"; \
 	fi; \
 	steps/get_ctm.sh \$frame_shift_opt . ${main_rnnlm}/graph ${main_rnnlm}/decode
-    """
-}
-
-process decode_unk {
-    input:
-    path main_rnnlm from main_rnnlm
-
-    output:
-    path "${params.acoustic_model}_pruned_rescored_main_rnnlm_unk*" into rnnlm_decode_unk
-
-    script:
-    """
-    ln -s ${params.kaldi_root}/egs/wsj/s5/rnnlm
-    ln -s ${params.kaldi_root}/egs/wsj/s5/steps
-    ln -s ${params.kaldi_root}/egs/wsj/s5/utils
-    ln -s ${params.kaldi_root}/egs/wsj/s5/local
-    ln -s ${params.srcdir}/build
     
 	frame_shift_opt=""; \
 	if [ -f  ${main_rnnlm}/frame_subsampling_factor ]; then \
@@ -307,15 +294,21 @@ process decode_unk {
 	  --min-lmwt ${params.lm_scale} \
 	  --max-lmwt ${params.lm_scale} \
 	  . ${main_rnnlm}/graph ${main_rnnlm}/decode
+
+    cat ${main_rnnlm}/decode/score_${params.lm_scale}/..ctm  | perl -npe \'s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/\' > segmented.splitw2.ctm
+
+    python3 scripts/compound-ctm.py \
+		\"python3 scripts/compounder.py build/fst/data/compounderlm/G.fst build/fst/data/compounderlm/words.txt\" \
+		< segmented.splitw2.ctm > with-compounds.ctm
+    
+    cat with-compounds.ctm | grep -v \"++\" |  grep -v \"\\[sil\\]\" | grep -v -e \" \$\$\" | perl -npe \'s/\\+//g\' | sort -k1,1 -k 3,3g > segmented.ctm
     """
 }
 
-process splitw2 {
+process json {
     input:
-    path rnnlm_decode_unk from rnnlm_decode_unk
+    file segmented_ctm
 
     script:
-    """
-    cat ${rnnlm_decode_unk}/decode/score_${params.lm_scale}/audio.ctm  | perl -npe \'s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/\' > segmented.splitw2.ctm
-    """
+    "python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk.json"
 }
