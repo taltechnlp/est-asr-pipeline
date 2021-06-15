@@ -1,12 +1,14 @@
 #!/usr/bin/env nextflow
 
 params.in = "/home/aivo_olevi/tmp/speechfiles/intervjuu2018080910.mp3"
+params.out = "result.json"
+params.out_format = "json"
 params.do_music_detection = "no" // yes or no 
-params.fileext = "mp3"
+params.file_ext = "mp3"
 params.srcdir = "/opt/kaldi-offline-transcriber"
 params.acoustic_model = "tdnn_7d_online"
-params.njobs = 1
-params.nthreads = 1
+params.njobs = 2
+params.nthreads = 4
 params.decode_cmd = "run.pl"
 params.kaldi_root = "/opt/kaldi"
 params.et_g2p_fst = "/opt/et-g2p-fst"
@@ -22,23 +24,23 @@ process transcribe {
     file 'audio.wav' into audio
     
     script:
-    if( params.fileext == 'wav' )
+    if( params.file_ext == 'wav' )
         """
         sox $params.in -c 1 audio.wav rate -v 16k
         """
 
-    else if( params.fileext == 'mp3' || params.fileext == 'm4a' || params.fileext == 'mp4' )
+    else if( params.file_ext == 'mp3' || params.file_ext == 'mpga' || params.file_ext == 'm4a' || params.file_ext == 'mp4' )
         """
         ffmpeg -i $params.in -f sox - | sox -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k	
         """
 
-    else if( params.fileext == 'ogg' || params.fileext == 'mp2' || params.fileext == 'flac' )
+    else if( params.file_ext == 'ogg' || params.file_ext == 'mp2' || params.file_ext == 'flac' )
         """
         sox $params.in -c 1 audio.wav rate -v 16k
         """
 
     else
-        error "Invalid alignment params.fileext: $params.fileext"
+        error "Invalid alignment params.file_ext: $params.file_ext"
 
 }
 
@@ -205,7 +207,7 @@ process one_pass_decoding {
     """
 }
 
-process restore_lattices {
+process rescore_lattices {
     // Rescore lattices with a larger language model
     input: 
     path pruned_unk from pruned_unk
@@ -309,6 +311,13 @@ process json {
     input:
     file segmented_ctm
 
+    storeDir 'results'
+
+    output:
+    file params.out into results
+
     script:
-    "python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.acoustic_model}_pruned_rescored_main_rnnlm_unk.json"
+    """
+    python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.out}
+    """
 }

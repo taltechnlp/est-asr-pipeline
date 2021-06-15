@@ -9,3 +9,5 @@ sid
 rnnlm
 work
 .nextflow*
+results
+.vscode
