@@ -4,6 +4,8 @@ params.in = "/home/aivo_olevi/tmp/speechfiles/intervjuu2018080910.mp3"
 params.out = "result.json"
 params.out_format = "json"
 params.do_music_detection = "no" // yes or no 
+params.do_speaker_id = "no" // yes or no
+params.speaker_id_server_url = ""
 params.file_ext = "mp3"
 params.srcdir = "/opt/kaldi-offline-transcriber"
 params.acoustic_model = "tdnn_7d_online"
@@ -16,7 +18,7 @@ params.lm_scale = 10
 audio_file = file(params.in)
 
 
-process transcribe {
+process to_wav {
     input:
     path audio_file
 
@@ -58,43 +60,19 @@ process diarization {
         WORK_DIR=\$PWD
         cd $params.srcdir
         ./scripts/diarization.sh $diarization_opts \${WORK_DIR}/$audio \${WORK_DIR}/show.uem.seg
-        cd \$WORK_DIR
-        sleep 2
-        echo \$PWD
-        ls -l
-        cat show.seg > show1.seg
         """
-}
-
-process scp {
-    input:
-    file audio
-
-    output:
-    file 'wav.scp' into scp
-
-    script:
-    "echo \"audio audio.wav\" > wav.scp"
-}
-
-process reco2file_and_channel {
-    output:
-    file "reco2file_and_channel" into reco2file_and_channel
-
-    script:
-    "echo audio audio A > reco2file_and_channel"
 }
 
 process segments {
     input:
     file show_seg
-    file reco2file_and_channel
 
     output:
     file 'segments' into segments
 
     script:
     """
+    echo audio audio A > reco2file_and_channel
     cat $show_seg | cut -f "3,4,8" -d " " | \
 	while read LINE ; do \
 		start=`echo \$LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); \$start=\$t[0]/100.0; printf("%08.3f", \$start);'`; \
@@ -105,52 +83,31 @@ process segments {
 	if [ ! -s segments } ]; then \
 	  echo "audio-dummy---0.000-0.110 audio 0.0 0.110" > segments; \
 	fi
-	
+	cat segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > utt2spk
+    ${params.srcdir}/utils/utt2spk_to_spk2utt.pl utt2spk > spk2utt
     """
 }
 
-process utt2spk {
-    input:
-    file segments
-
-    output:
-    file 'utt2spk' into utt2spk
-
-    script:
-    """
-    cat $segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > utt2spk
-    """
-
-}
-
-process spk2utt {
-    input:
-    file utt2spk
-
-    output:
-    file 'spk2utt' into spk2utt
-
-    script:
-    """
-    ${params.srcdir}/utils/utt2spk_to_spk2utt.pl $utt2spk > spk2utt
-    """
-}
-
+// MFCC calculation
 process mfcc {
     input:
-    file spk2utt
-    file utt2spk
-    file scp
     file segments
     file audio
 
     output:
     file 'feats.scp' into feats
+    file 'ivectors/*' into ivectors
+    file 'utt2spk' into utt2spk
 
     script:
     """
     ln -s ${params.kaldi_root}/egs/wsj/s5/utils
     ln -s ${params.kaldi_root}/egs/wsj/s5/steps
+    ln -s ${params.srcdir}/build
+
+    cat $segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > utt2spk
+    ${params.srcdir}/utils/utt2spk_to_spk2utt.pl utt2spk > spk2utt
+    echo \"audio audio.wav\" > wav.scp
     make_mfcc.sh \
         --mfcc-config ${params.srcdir}/build/fst/${params.acoustic_model}/conf/mfcc.conf \
         --cmd ${params.decode_cmd} \
@@ -158,28 +115,13 @@ process mfcc {
         \$PWD || exit 1
 	steps/compute_cmvn_stats.sh \$PWD || exit 1
 	utils/fix_data_dir.sh \$PWD
-    """
-}
-
-process ivectors {
-    input:
-    file feats
-    file utt2spk
-
-    output:
-    file 'ivectors/*' into ivectors
-
-    script:
-    """
-    ln -s ${params.kaldi_root}/egs/wsj/s5/steps
-    ln -s ${params.kaldi_root}/egs/wsj/s5/utils
-    ln -s ${params.srcdir}/build
 
     steps/online/nnet2/extract_ivectors_online.sh --cmd \"${params.decode_cmd}\" --nj ${params.njobs} \
 		. build/fst/${params.acoustic_model}/ivector_extractor ivectors || exit 1;
     """
 }
 
+// Do 1-pass decoding using chain online models
 process one_pass_decoding {
     // Do 1-pass decoding using chain online models
     input:
@@ -207,6 +149,7 @@ process one_pass_decoding {
     """
 }
 
+// Rescore lattices with a larger language model
 process rescore_lattices {
     // Rescore lattices with a larger language model
     input: 
@@ -317,7 +260,18 @@ process json {
     file params.out into results
 
     script:
-    """
-    python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.out}
-    """
+    if( params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+        """
+        python3 ${params.srcdir}/local/segmented_ctm2json.py --speaker-names sid-result.json --pms-seg show.pms.seg $segmented_ctm > ${params.out}
+        """
+    else if( params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+        """
+        """
+    else if( params.do_speaker_id == 'no' && params.do_music_detection == 'yes' )
+        """
+        """
+    else
+        """
+        python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.out}
+        """
 }
