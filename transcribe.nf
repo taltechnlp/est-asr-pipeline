@@ -4,17 +4,9 @@ params.in = "/home/aivo_olevi/tmp/speechfiles/intervjuu2018080910.mp3"
 params.out = "result.json"
 params.out_format = "json"
 params.do_music_detection = "no" // yes or no 
-params.do_speaker_id = "no" // yes or no
-params.speaker_id_server_url = ""
+params.do_speaker_id = "yes" // yes or no
 params.file_ext = "mp3"
-params.srcdir = "/opt/kaldi-offline-transcriber"
-params.acoustic_model = "tdnn_7d_online"
-params.njobs = 2
-params.nthreads = 4
-params.decode_cmd = "run.pl"
-params.kaldi_root = "/opt/kaldi"
-params.et_g2p_fst = "/opt/et-g2p-fst"
-params.lm_scale = 10
+params.do_punctuation = "yes" // yes or no
 audio_file = file(params.in)
 
 
@@ -52,6 +44,7 @@ process diarization {
 
     output: 
     file 'show.seg' into show_seg
+    file 'show.pms.seg' into show_pms_seg 
 
     script:
         diarization_opts = params.do_music_detection == 'yes' ? '-m' : '' 
@@ -98,6 +91,7 @@ process mfcc {
     file 'feats.scp' into feats
     file 'ivectors/*' into ivectors
     file 'utt2spk' into utt2spk
+    file 'spk2utt' into spk2utt
 
     script:
     """
@@ -121,6 +115,59 @@ process mfcc {
     """
 }
 
+process speaker_id {
+    input:
+    file segments
+    file audio
+    file utt2spk
+    file spk2utt
+
+    output:
+    file 'sid-result.json' optional true into sid_result
+
+    script:
+        if( params.do_speaker_id == 'yes' )
+            """
+            ln -s ${params.kaldi_root}/egs/wsj/s5/utils
+            ln -s ${params.kaldi_root}/egs/wsj/s5/steps
+            ln -s ${params.srcdir}/sid
+            ln -s ${params.srcdir}/kaldi-data
+            ln -s ${params.srcdir}/build
+            ln -s ${params.srcdir}/conf
+
+            echo \"audio audio.wav\" > wav.scp
+
+            # MFCC for Speaker ID, since the features for MFCC are different from speech recognition
+            make_mfcc.sh \
+                --mfcc-config conf/mfcc_sid.conf \
+                --cmd \"${params.decode_cmd}\" \
+                --nj ${params.njobs} \
+                \$PWD || exit 1
+            steps/compute_cmvn_stats.sh \$PWD || exit 1
+            sid/compute_vad_decision.sh --nj ${params.njobs} --cmd \"${params.decode_cmd}\" . || exit 1
+
+            # i-vectors for each speaker in our audio file
+            sid/extract_ivectors.sh --cmd \"${params.decode_cmd}\" --nj ${params.njobs} --num-threads ${params.nthreads} \
+                kaldi-data/sid/extractor_2048 . .
+
+            # cross-product between trained speakers and diarized speakers
+            join -j 2 \
+                <(cut -d \" \" -f 1 kaldi-data/sid/name_ivector.scp | sort ) \
+                <(cut -d \" \" -f 1 spk_ivector.scp | sort ) > trials
+
+            ivector-plda-scoring --normalize-length=true \
+                \"ivector-copy-plda --smoothing=0.3 kaldi-data/sid/lda_plda - |\" \
+                \"ark:ivector-subtract-global-mean scp:kaldi-data/sid//name_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |\" \
+                \"ark:ivector-subtract-global-mean kaldi-data/sid/mean.vec scp:spk_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |\" \
+                trials lda_plda_scores
+            
+	        cat lda_plda_scores | sort -k2,2 -k3,3nr | awk \'{print \$3, \$1, \$2}\' | uniq -f2 | awk \'{if (\$1 > ${params.sid_similarity_threshold}) {print \$3, \$2}}\' | \
+	        perl -npe \'s/^\\S+-(S\\d+)/\\1/; s/_/ /g;\' | python -c \'import json, sys; spks={s.split()[0]:{\"name\" : \" \".join(s.split()[1:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
+            """
+        else
+        "echo \"Speaker ID skipped\""
+}
+
 // Do 1-pass decoding using chain online models
 process one_pass_decoding {
     // Do 1-pass decoding using chain online models
@@ -140,7 +187,7 @@ process one_pass_decoding {
     mkdir -p ${params.acoustic_model}_pruned_unk
     (cd ${params.acoustic_model}_pruned_unk; for f in ${params.srcdir}/build/fst/${params.acoustic_model}/*; do ln -s \$f; done)
 
-    steps/nnet3/decode.sh --num-threads $params.nthreads --acwt 1.0  --post-decode-acwt 10.0 \
+    steps/nnet3/decode.sh --num-threads ${params.nthreads} --acwt 1.0  --post-decode-acwt 10.0 \
 	    --skip-scoring true --cmd \"${params.decode_cmd}\" --nj ${params.njobs} \
 	    --online-ivector-dir ivectors \
 	    --skip-diagnostics true \
@@ -211,6 +258,7 @@ process decode {
 
     output:
     file 'segmented.ctm' into segmented_ctm
+    file 'with-compounds.ctm' into with_compounds_ctm
 
     script:
     """
@@ -250,28 +298,106 @@ process decode {
     """
 }
 
-process json {
+process to_json {
+    beforeScript "ln -s ${params.srcdir}/local; ln -s ${params.srcdir}/scripts"
+
     input:
     file segmented_ctm
+    file with_compounds_ctm
+    file sid_result
+    file show_pms_seg
+
+    output:
+    file "result.json" into result_json
+
+    script:
+    if (params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+        """
+        python3 local/segmented_ctm2json.py --speaker-names $sid_result --pms-seg $show_pms_seg $segmented_ctm > result.json
+        """
+    else if (params.do_speaker_id == 'yes' && params.do_music_detection == 'no' )
+        """
+        python3 local/segmented_ctm2json.py --speaker-names $sid_result $segmented_ctm > result.json
+        """
+    else if (params.do_speaker_id == 'no' && params.do_music_detection == 'yes' )
+        """
+        python3 local/segmented_ctm2json.py --pms-seg $show_pms_seg $segmented.ctm > result.json
+        """
+    else
+        """
+        python3 local/segmented_ctm2json.py $segmented_ctm > result.json
+        """
+}
+
+process punctuation {
+    beforeScript "ln -s ${params.srcdir}/local; ln -s ${params.srcdir}/scripts"
+
+    input:
+    file result_json
+
+    output:
+    file "punctuated.json" into punctuated_json
+
+    when:
+    params.do_punctuation == 'yes'
+
+    script:
+    """
+    WORK_DIR=\$PWD
+    cd $params.srcdir/punctuator-data/est_punct2
+    TEMP_FILE1=\$(mktemp); 
+    TEMP_FILE2=\$(mktemp);
+    cat \$WORK_DIR/result.json > TEMP_FILE1 
+    python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
+    cat TEMP_FILE2 > \$WORK_DIR/punctuated.json
+    rm TEMP_FILE1 TEMP_FILE2 
+    cd \$WORK_DIR
+    """
+}
+
+process output {
+    beforeScript "ln -s ${params.srcdir}/local; ln -s ${params.srcdir}/scripts"
 
     storeDir 'results'
+
+    input:
+    file with_compounds_ctm
+    file result_json
+    file punctuated_json
 
     output:
     file params.out into results
 
     script:
-    if( params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+    json = params.do_punctuation
+                     ? punctuated_json
+                     : result_json 
+    if (params.out_format == 'json')
         """
-        python3 ${params.srcdir}/local/segmented_ctm2json.py --speaker-names sid-result.json --pms-seg show.pms.seg $segmented_ctm > ${params.out}
+        local/normalize_json.py local/words2numbers.py $json > $params.out
         """
-    else if( params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+    else if (params.out_format == 'with-compunds')
         """
+        cat $with_compounds_ctm | scripts/unsegment-ctm.py | LC_ALL=C sort -k 1,1 -k 3,3n -k 4,4n > with-compounds.synced.ctm
+        cat with-compounds.synced.ctm | grep -v \"<\" > res.ctm
+        cat res.ctm | scripts/ctm2with-sil-ctm.py > $params.out
         """
-    else if( params.do_speaker_id == 'no' && params.do_music_detection == 'yes' )
+    else if (params.out_format == "trs")
         """
+        local/normalize_json.py local/words2numbers.py $json > normalized.json
+        local/json2trs.py --fid trs normalized.json > $params.out
+        """
+    else if (params.out_format == "txt")
+        """
+        local/normalize_json.py local/words2numbers.py $json > normalized.json
+        local/json2trs.py --fid trs normalized.json > result.trs
+        cat result.trs  | grep -v \"^<\" > $params.out
+        """
+    else if (params.out_format == "srt")
+        """
+        local/normalize_json.py local/words2numbers.py $json > normalized.json
+        local/json2srt.py normalized.json > $params.out
         """
     else
-        """
-        python3 ${params.srcdir}/local/segmented_ctm2json.py $segmented_ctm > ${params.out}
-        """
+        error "Invalid out_format parameter: ${params.out_format} not supported!"
 }
