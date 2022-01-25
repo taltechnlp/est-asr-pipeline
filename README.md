@@ -51,7 +51,7 @@ Firstly, the main script (transcribe.nf) already has default values for input pa
 
 Additional configuration is currently provided via the nextflow.config file. The following parameters should be changed if you need advanced execution optimizations:
 
--   nthreads - By default the script will use 4 system threads. Should be changed in case you are executing the script in parallel multiple times or want to use a different nubmer of threads per execution.
+-   nthreads - By default the script will use 2 system threads. Should be changed in case you are executing the script in parallel multiple times or want to use a different nubmer of threads per execution.
 
 The rest of the parameters are there because the transcribe.nf file needs these. Those should never be changed unless you are deliberately changing the script (replacing the acoustic model or optimizing other parameters).
 
