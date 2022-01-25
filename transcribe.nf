@@ -1,11 +1,11 @@
 #!/usr/bin/env nextflow
 
-params.in = "/home/aivo_olevi/tmp/speechfiles/intervjuu2018080910.mp3"
+params.in = "/home/aivo_olevi/tmp/ao_1.wav"
 params.out = "result.json"
 params.out_format = "json"
 params.do_music_detection = "no" // yes or no 
 params.do_speaker_id = "yes" // yes or no
-params.file_ext = "mp3"
+params.file_ext = "wav"
 params.do_punctuation = "yes" // yes or no
 audio_file = file(params.in)
 
@@ -28,7 +28,7 @@ process to_wav {
         ffmpeg -i $params.in -f sox - | sox -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k	
         """
 
-    else if( params.file_ext == 'ogg' || params.file_ext == 'mp2' || params.file_ext == 'flac' )
+    else if( params.file_ext == 'oga' || params.file_ext == 'ogg' || params.file_ext == 'mp2' || params.file_ext == 'flac' )
         """
         sox $params.in -c 1 audio.wav rate -v 16k
         """

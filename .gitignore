@@ -11,3 +11,7 @@ work
 .nextflow*
 results
 .vscode
+dag.dot*
+flowchart.png*
+trace.txt*
+report.html*
