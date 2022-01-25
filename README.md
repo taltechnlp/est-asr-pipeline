@@ -26,11 +26,9 @@ Start the container (named "nextflow:latest") and put it into background (`-d`).
     mkdir -p ~/tmp/speechfiles
     docker run --name nextflow -v ~/tmp/speechfiles:/opt/speechfiles --rm -d -t nextflow:latest
 
-To transcribe:
+To transcribe a speech recording provide at least input file, output file and file format as parameters. Also the -with-docker command line option should refer to the locally built and running Docker container:
 
-    nextflow run transcribe.nf -with-docker nextflow -with-report report.html -with-trace -with-dag flowchart.png -with-weblog 'http://localhost:7700/process/'
-
-    nextflow run transcribe.nf -with-docker nextflow -with-weblog 'http://localhost:7700/process/'
+    nextflow run transcribe.nf -with-docker nextflow --in ~/audio.mp3 --out result.json --file_ext mp3
 
 There is a project which enables to set up an API server and a simple user interface to upload files and retrieve results from this workflow. It can be useful for hosting this workflow: https://github.com/taltechnlp/est-asr-backend
 
@@ -44,7 +42,7 @@ Firstly, the main script (transcribe.nf) already has default values for input pa
 
 -   --in - The name and location of the audio recording in you local system that needs to be transcribed.
 -   --file_ext - the file extention of the input file. This does not have to exactly match the actual file name but is important to determine how to turn the file into ´wav´ format. Supported options: ´wav´, ´ḿp3´, ´mpga´, ´m4a´, ´mp4´, ´oga´, ´ogg´, ´mp2´, ´flac´.
--   --out - The output file name and location.
+-   --out - The output file name. Cannot be a location in the local system. Should be a unique file name. By default will be saved into the /results folder of this project.
 -   --out_format - Output format of the transcription. By default `json`. Supported options: ´json´, ´trs´, ´with-compounds´, ´txt´, ´srt´.
 -   --do_speaker_id - By default 'yes'. Include speaker diarization and identification. The result will include speaker names. Some Estonian celebrities and radio personalities will be identified by their name, others will be give ID-s.
 -   --do-punctuation - Whether to attempt punctuation recovery and add punctuation to the transcribed text.
