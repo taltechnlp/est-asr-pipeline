@@ -155,36 +155,36 @@ process speaker_id {
       file 'sid-result.json' into sid_result
 
     shell:
-        if( params.do_speaker_id )
-            '''
-            . !{projectDir}/bin/prepare_process.sh
-            ln -v -s !{params.rootdir}/kaldi-data
-            ln -v -s !{params.rootdir}/build
+        if (params.do_speaker_id)
+          '''
+          . !{projectDir}/bin/prepare_process.sh
+          ln -v -s !{params.rootdir}/kaldi-data
+          ln -v -s !{params.rootdir}/build
 
-            utils/copy_data_dir.sh !{datadir} datadir_sid
-            
-            # MFCC for Speaker ID, since the features for MFCC are different from speech recognition
-            steps/make_mfcc.sh --nj 1 \
-                --mfcc-config kaldi-data/sid/mfcc_sid.conf \
-                datadir_sid || exit 1
-            steps/compute_cmvn_stats.sh datadir_sid || exit 1
-            sid/compute_vad_decision.sh --nj 1 datadir_sid || exit 1
+          utils/copy_data_dir.sh !{datadir} datadir_sid
+          
+          # MFCC for Speaker ID, since the features for MFCC are different from speech recognition
+          steps/make_mfcc.sh --nj 1 \
+              --mfcc-config kaldi-data/sid/mfcc_sid.conf \
+              datadir_sid || exit 1
+          steps/compute_cmvn_stats.sh datadir_sid || exit 1
+          sid/compute_vad_decision.sh --nj 1 datadir_sid || exit 1
 
-            # i-vectors for each speaker in our audio file
-            sid/extract_ivectors.sh  --nj 1 --num-threads !{params.nthreads} \
-                kaldi-data/sid/extractor_2048 datadir_sid .
+          # i-vectors for each speaker in our audio file
+          sid/extract_ivectors.sh  --nj 1 --num-threads !{params.nthreads} \
+              kaldi-data/sid/extractor_2048 datadir_sid .
 
-            # cross-product between trained speakers and diarized speakers
-            join -j 2 \
-                <(cut -d " " -f 1 kaldi-data/sid/name_ivector.scp | sort ) \
-                <(cut -d " " -f 1 spk_ivector.scp | sort ) > trials
+          # cross-product between trained speakers and diarized speakers
+          join -j 2 \
+              <(cut -d " " -f 1 kaldi-data/sid/name_ivector.scp | sort ) \
+              <(cut -d " " -f 1 spk_ivector.scp | sort ) > trials
 
-            ivector-plda-scoring --normalize-length=true \
-                "ivector-copy-plda --smoothing=0.3 kaldi-data/sid/lda_plda - |" \
-                "ark:ivector-subtract-global-mean scp:kaldi-data/sid//name_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-                "ark:ivector-subtract-global-mean kaldi-data/sid/mean.vec scp:spk_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-                trials lda_plda_scores
-            
+          ivector-plda-scoring --normalize-length=true \
+              "ivector-copy-plda --smoothing=0.3 kaldi-data/sid/lda_plda - |" \
+              "ark:ivector-subtract-global-mean scp:kaldi-data/sid//name_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+              "ark:ivector-subtract-global-mean kaldi-data/sid/mean.vec scp:spk_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
+              trials lda_plda_scores
+          
 	        cat lda_plda_scores | sort -k2,2 -k3,3nr | awk \'{print $3, $1, $2}\' | uniq -f2 | awk \'{if ($1 > !{params.sid_similarity_threshold}) {print $3, $2}}\' | \
 	        perl -npe \'s/^\\S+-(S\\d+)/\\1/; s/_/ /g;\' | python -c \'import json, sys; spks={s.split()[0]:{"name" : " ".join(s.split()[1:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
           '''
