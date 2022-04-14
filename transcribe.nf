@@ -128,14 +128,14 @@ process mfcc {
     . !{projectDir}/bin/prepare_process.sh
 	
     utils/copy_data_dir.sh !{datadir} datadir_hires
-    steps/make_mfcc.sh \
+    steps/make_mfcc.sh --nj 1 \
         --mfcc-config !{params.rootdir}/build/fst/!{params.acoustic_model}/conf/mfcc.conf \
         datadir_hires || exit 1
     steps/compute_cmvn_stats.sh datadir_hires || exit 1
     utils/fix_data_dir.sh datadir_hires
 
-    steps/online/nnet2/extract_ivectors_online.sh \
-		datadir_hires !{params.rootdir}/build/fst/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
+    steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
+      datadir_hires !{params.rootdir}/build/fst/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
     '''
 }
 
@@ -164,14 +164,14 @@ process speaker_id {
             utils/copy_data_dir.sh !{datadir} datadir_sid
             
             # MFCC for Speaker ID, since the features for MFCC are different from speech recognition
-            steps/make_mfcc.sh \
+            steps/make_mfcc.sh --nj 1 \
                 --mfcc-config kaldi-data/sid/mfcc_sid.conf \
                 datadir_sid || exit 1
             steps/compute_cmvn_stats.sh datadir_sid || exit 1
-            sid/compute_vad_decision.sh  datadir_sid || exit 1
+            sid/compute_vad_decision.sh --nj 1 datadir_sid || exit 1
 
             # i-vectors for each speaker in our audio file
-            sid/extract_ivectors.sh --num-threads !{params.nthreads} \
+            sid/extract_ivectors.sh  --nj 1 --num-threads !{params.nthreads} \
                 kaldi-data/sid/extractor_2048 datadir_sid .
 
             # cross-product between trained speakers and diarized speakers
@@ -216,7 +216,7 @@ process one_pass_decoding {
       mkdir -p !{params.acoustic_model}_pruned_unk
       for f in !{params.rootdir}/build/fst/!{params.acoustic_model}/?*; do ln -s $f !{params.acoustic_model}_pruned_unk/; done
 
-      steps/nnet3/decode.sh --num-threads !{params.nthreads} --acwt 1.0  --post-decode-acwt 10.0 \
+      steps/nnet3/decode.sh  --nj 1 --num-threads !{params.nthreads} --acwt 1.0  --post-decode-acwt 10.0 \
         --skip-scoring true \
         --online-ivector-dir ivectors \
         --skip-diagnostics true \

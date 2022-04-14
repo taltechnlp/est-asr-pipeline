@@ -15,6 +15,12 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 
     wget -qO- https://get.nextflow.io | bash
 
+Pull the required Docker image, containing models and libraries (recommended):
+
+    docker pull koodivaramu.eesti.ee:5050/taltechnlp/est-asr-pipeline:0.1
+     
+You might need to register at koodivaramu.eesti.ee to do that, and also do `docker login koodivaramu.eesti.ee:5050` using a generated access token.
+
 ## Usage
 
 ### Using a prebuilt Docker image
@@ -23,7 +29,7 @@ Run:
 
     nextflow run transcribe.nf --in /path/to/some_audiofile.mp3
 
-The first invocation might take some time, because the required Docker container
+If you didn't pull the Docker image before, then the first invocation might take some time, because the required Docker image
 containing all the needed models and libraries is automatically pulled from the remote registry.
 
 A successful invocation will result with something like this:
