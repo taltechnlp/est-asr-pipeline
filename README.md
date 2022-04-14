@@ -17,9 +17,8 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 
 Pull the required Docker image, containing models and libraries (recommended):
 
-    docker pull koodivaramu.eesti.ee:5050/taltechnlp/est-asr-pipeline:0.1
+    docker pull alumae/est-asr-pipeline:0.1
      
-You might need to register at koodivaramu.eesti.ee to do that, and also do `docker login koodivaramu.eesti.ee:5050` using a generated access token.
 
 ## Usage
 
@@ -73,10 +72,10 @@ TODO
 
 Firstly, the main script (transcribe.nf) already has default values for input parameters. All of these can be provided via the command line when executing the script using the nextflow executable. To use a parameter, ignore the 'params.' part and prepend two hyphens '--'. So 'params.in' becomes '--in'. The following parameter should always be provided (unless the default value is satisfactory):
 
--   --in - The name and location of the audio recording in you local system that needs to be transcribed.
--   --do_speaker_id - By default 'yes'. Include speaker diarization and identification. The result will include speaker names. Some Estonian celebrities and radio personalities will be identified by their name, others will be give ID-s.
--   --do_punctuation - Whether to attempt punctuation recovery and add punctuation to the transcribed text.
--   --do_language_id - Whether to apply a language ID model to discard speech segements that are not in Estonian
+-   --in <filename> - The name and location of the audio recording in you local system that needs to be transcribed.
+-   `--do_speaker_id true|false` - Include speaker diarization and identification. The result will include speaker names. Some Estonian celebrities and radio personalities will be identified by their name, others will be give ID-s. By default `true`.
+-   `--do_punctuation true|false` - Whether to attempt punctuation recovery and add punctuation to the transcribed text. By default `true`.
+-   `--do_language_id true|false` - Whether to apply a language ID model to discard speech segements that are not in Estonian. By default `true`.
 
 ### Configuration file
 

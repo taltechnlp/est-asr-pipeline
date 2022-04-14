@@ -2,10 +2,10 @@
 
 def env = System.getenv()
 params.in = "/home/aivo_olevi/tmp/ao_1.wav"
-params.do_music_detection = "no" // yes or no 
-params.do_speaker_id = "yes" // yes or no
-params.do_punctuation = "yes" // yes or no
-params.do_language_id = "yes" // yes or no
+params.do_music_detection = true
+params.do_speaker_id = true
+params.do_punctuation = true
+params.do_language_id = true
 audio_file = file(params.in)
 
 process to_wav {
@@ -31,7 +31,7 @@ process diarization {
     file 'show.pms.seg' into show_pms_seg 
 
     script:
-        diarization_opts = params.do_music_detection == 'yes' ? '-m' : '' 
+        diarization_opts = params.do_music_detection ? '-m' : '' 
         """
         echo "audio 1 0 1000000000 U U U 1" > show.uem.seg
         diarization.sh $diarization_opts $audio show.uem.seg
@@ -78,7 +78,7 @@ process language_id {
     
     
     shell:
-    if ( params.do_language_id == "yes" )
+    if ( params.do_language_id )
       '''
       . !{projectDir}/bin/prepare_process.sh
       
@@ -152,10 +152,10 @@ process speaker_id {
       path conf from "$projectDir/conf"
 
     output:
-      file 'sid-result.json' optional true into sid_result
+      file 'sid-result.json' into sid_result
 
     shell:
-        if( params.do_speaker_id == 'yes' )
+        if( params.do_speaker_id )
             '''
             . !{projectDir}/bin/prepare_process.sh
             ln -v -s !{params.rootdir}/kaldi-data
@@ -189,7 +189,9 @@ process speaker_id {
 	        perl -npe \'s/^\\S+-(S\\d+)/\\1/; s/_/ /g;\' | python -c \'import json, sys; spks={s.split()[0]:{"name" : " ".join(s.split()[1:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
           '''
         else
-          "echo Speaker ID skipped"
+          '''
+          echo "{}" >  sid-result.json
+          '''
 }
 
 
@@ -306,17 +308,17 @@ process to_json {
       file "unpunctuated.json" into unpunctuated_json
 
     shell:
-      if (params.do_speaker_id == 'yes' && params.do_music_detection == 'yes' )
+      if (params.do_speaker_id && params.do_music_detection)
           """
           python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} --pms-seg !{show_pms_seg} !{segmented_ctm} > unpunctuated.json
           """
-      else if (params.do_speaker_id == 'yes' && params.do_music_detection == 'no' )
+      else if (params.do_speaker_id && !params.do_music_detection )
           """
           python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} !{segmented_ctm} > unpunctuated.json
           """
-      else if (params.do_speaker_id == 'no' && params.do_music_detection == 'yes' )
+      else if (!params.do_speaker_id  && params.do_music_detection)
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_pms_seg} {segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_pms_seg} !{segmented_ctm} > unpunctuated.json
           """
       else
           """
@@ -332,22 +334,25 @@ process punctuation {
     output:
       file "punctuated.json" into punctuated_json
 
-    when:
-      params.do_punctuation == 'yes'
-
     shell:
-    '''
-      WORK_DIR=$PWD
-      cd !{params.rootdir}/punctuator-data/est_punct2
-      TEMP_FILE1=$(mktemp); 
-      TEMP_FILE2=$(mktemp);
-      cat $WORK_DIR/!{unpunctuated_json} > TEMP_FILE1 
-      python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
-      cat TEMP_FILE2 > $WORK_DIR/punctuated.json
-      rm TEMP_FILE1 TEMP_FILE2 
-      cd $WORK_DIR
-    '''
+      if (params.do_punctuation)
+        '''
+        WORK_DIR=$PWD
+        cd !{params.rootdir}/punctuator-data/est_punct2
+        TEMP_FILE1=$(mktemp); 
+        TEMP_FILE2=$(mktemp);
+        cat $WORK_DIR/!{unpunctuated_json} > TEMP_FILE1 
+        python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
+        cat TEMP_FILE2 > $WORK_DIR/punctuated.json
+        rm TEMP_FILE1 TEMP_FILE2 
+        cd $WORK_DIR
+        '''
+      else
+        '''
+        cp !{unpunctuated_json} punctuated.json
+        '''
 }
+
 
 
 
@@ -357,7 +362,6 @@ process output {
 
     input:
       file with_compounds_ctm
-      file unpunctuated_json
       file punctuated_json
 
     output:
@@ -368,9 +372,7 @@ process output {
       file "result.with-compounds.ctm" into result_with_compounds_ctm
 
     script:
-      json = params.do_punctuation
-                       ? punctuated_json
-                       : unpunctuated_json 
+      json = punctuated_json
       """
       normalize_json.py words2numbers.py $json > result.json
 
