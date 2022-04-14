@@ -1,8 +1,11 @@
 #!/bin/bash
 
 set -o errexit
+
+SCRIPT_PATH=`dirname $0`
+
 if [ -z $LOCALCLASSPATH ]; then
-	LOCALCLASSPATH=lib/LIUM_SpkDiarization-4.2.jar
+	LOCALCLASSPATH="$SCRIPT_PATH/lib/LIUM_SpkDiarization-4.2.jar"
 fi
 
 
@@ -67,19 +70,19 @@ java=java
 datadir=`dirname $uem`
 
 #define where the UBM GMM is
-ubm=models/ubm.gmm
+ubm="$SCRIPT_PATH/models/lium_diarization/ubm.gmm"
 
 
 #define where the speech / non-speech set of GMMs is
 #pmsgmm=./model/sms.gmms
-pmsgmm=models/sms.gmms
+pmsgmm="$SCRIPT_PATH/models/lium_diarization/sms.gmms"
 
 #define where the silence set of GMMs is
-sgmm=models/s.gmms
+sgmm="$SCRIPT_PATH/models/lium_diarization/s.gmms"
 
 #define where the gender and bandwidth set of GMMs (4 models) is
 #(female studio, male studio, female telephone, male telephone) 
-ggmm=models/gender.gmms
+ggmm="$SCRIPT_PATH/models/lium_diarization/gender.gmms"
 
 
 echo "#####################################################"
