@@ -8,6 +8,7 @@ params.do_punctuation = true
 params.do_language_id = true
 audio_file = file(params.in)
 
+
 process to_wav {
     input:
     path audio_file
@@ -17,7 +18,7 @@ process to_wav {
     
     shell:
         """
-        ffmpeg -i !{audio_file} -f sox - | sox -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k	
+        ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k 
         """
 
 }
@@ -45,6 +46,7 @@ process prepare_initial_data_dir {
 
     output:
     path 'init_datadir' into init_datadir optional true
+    
 
     shell:
     '''
@@ -62,8 +64,7 @@ process prepare_initial_data_dir {
       done > init_datadir/segments
       cat init_datadir/segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > init_datadir/utt2spk
       utils/utt2spk_to_spk2utt.pl init_datadir/utt2spk > init_datadir/spk2utt
-          echo "audio !{audio}" > init_datadir/wav.scp
-      
+      echo "audio !{audio}" > init_datadir/wav.scp
     fi
     '''
 }
@@ -74,7 +75,7 @@ process language_id {
       file audio    
     
     output:
-      path 'datadir' into datadir
+      path 'datadir' into datadir  optional true
     
     
     shell:
@@ -89,18 +90,20 @@ process language_id {
       ivector-normalize-length --scaleup=false ark:- ark:- | \
       logistic-regression-eval --apply-log=true --max-steps=20 --mix-up=0 \
         !{params.rootdir}/models/lid_et/lr.scale.model \
-        ark:trials ark:- - | \
+        ark:trials ark:- scores
+      cat scores  | \
         awk '{print($1, $3 > '$threshold' ? "et" : "other")}' > utt2lang
+      grep "et$" utt2lang | sort | awk '{print($1)}' > utts.filtered
 
-      mkdir datadir
-      
-      grep "et$" utt2lang | sort | \
-        join <(sort !{init_datadir}/segments) - | \
-        awk '{print($1, $2, $3, $4)}' | LC_ALL=C sort > datadir/segments
-      
-      cp -r !{init_datadir}/{wav.scp,utt2spk,spk2utt} datadir
-      utils/fix_data_dir.sh datadir
-      
+      if [ -s utts.filtered ]; then
+        mkdir datadir
+        
+        join <(sort !{init_datadir}/segments) utts.filtered | \
+          awk '{print($1, $2, $3, $4)}' | LC_ALL=C sort > datadir/segments
+        
+        cp -r !{init_datadir}/{wav.scp,utt2spk,spk2utt} datadir
+        utils/fix_data_dir.sh datadir
+      fi
       '''      
     else
       '''
@@ -109,9 +112,6 @@ process language_id {
       '''
 }
     
-    
-    
-
 
 
 process mfcc {
