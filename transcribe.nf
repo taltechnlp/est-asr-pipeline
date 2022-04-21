@@ -41,11 +41,11 @@ process diarization {
 
 process prepare_initial_data_dir {
     input:
-    file show_seg
-    file audio
+      file show_seg
+      file audio
 
     output:
-    path 'init_datadir' into init_datadir optional true
+      path 'init_datadir' into init_datadir optional true
     
 
     shell:
@@ -75,8 +75,8 @@ process language_id {
       file audio    
     
     output:
-      path 'datadir' into datadir  optional true
-    
+      path 'datadir' into datadir optional true
+      path 'no_speech' into no_speech optional true
     
     shell:
     if ( params.do_language_id )
@@ -103,6 +103,8 @@ process language_id {
         
         cp -r !{init_datadir}/{wav.scp,utt2spk,spk2utt} datadir
         utils/fix_data_dir.sh datadir
+      else
+        touch -m no_speech
       fi
       '''      
     else
@@ -384,4 +386,27 @@ process output {
       """
 }
 
+process empty_output {
+
+    publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
+
+    input:
+      file no_speech
+
+    output:
+      file "result.json" into empty_result_json
+      file "result.srt" into empty_result_srt
+      file "result.trs" into empty_result_trs
+      file "result.ctm" into empty_result_ctm
+      file "result.with-compounds.ctm" into empty_result_with_compounds_ctm
+
+    script:
+      json = file("assets/empty.json")
+      with_compounds_ctm = file("assets/empty.ctm")
+      """
+      cp $json result.json
+      json2trs.py $json > result.trs      
+      touch result.srt result.ctm result.with-compounds.ctm
+      """
+}
 
