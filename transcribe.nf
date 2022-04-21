@@ -394,7 +394,10 @@ process empty_output {
     publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
-      val x from no_target_language_speech.ifEmpty{ no_speech }
+      val a from no_target_language_speech.ifEmpty{ 'EMPTY' }
+      val b from no_speech.ifEmpty{ 'EMPTY' }
+    when:
+      a != 'EMPTY' || b != 'EMPTY' 
 
     output:
       file "result.json" into empty_result_json
