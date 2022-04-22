@@ -46,8 +46,6 @@ process prepare_initial_data_dir {
 
     output:
       path 'init_datadir' into init_datadir optional true
-      path 'no_speech' into no_speech optional true
-    
 
     shell:
     '''
@@ -66,8 +64,6 @@ process prepare_initial_data_dir {
       cat init_datadir/segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > init_datadir/utt2spk
       utils/utt2spk_to_spk2utt.pl init_datadir/utt2spk > init_datadir/spk2utt
       echo "audio !{audio}" > init_datadir/wav.scp
-    else
-      touch no_speech
     fi
     '''
 }
@@ -79,7 +75,6 @@ process language_id {
     
     output:
       path 'datadir' into datadir optional true
-      path 'no_target_language_speech' into no_target_language_speech optional true
     
     shell:
     if ( params.do_language_id )
@@ -106,8 +101,6 @@ process language_id {
         
         cp -r !{init_datadir}/{wav.scp,utt2spk,spk2utt} datadir
         utils/fix_data_dir.sh datadir
-      else
-        touch -m no_target_language_speech
       fi
       '''      
     else
@@ -394,10 +387,10 @@ process empty_output {
     publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
-      val a from no_target_language_speech.ifEmpty{ 'EMPTY' }
-      val b from no_speech.ifEmpty{ 'EMPTY' }
+      val a from datadir.ifEmpty{ 'EMPTY' }
+      val b from init_datadir.ifEmpty{ 'EMPTY' }
     when:
-      a != 'EMPTY' || b != 'EMPTY' 
+      a == 'EMPTY' || b == 'EMPTY' 
 
     output:
       file "result.json" into empty_result_json
