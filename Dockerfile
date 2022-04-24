@@ -95,5 +95,14 @@ RUN echo '--sample-frequency=16000' >  /opt/est-asr-pipeline/kaldi-data/sid/mfcc
     echo '--num-ceps=24' >>  /opt/est-asr-pipeline/kaldi-data/sid/mfcc_sid.conf && \
     echo '--snip-edges=false' >>  /opt/est-asr-pipeline/kaldi-data/sid/mfcc_sid.conf
 
+# run punctuation once on dummy data, just to get the model compiled and cached
+RUN cd /opt/est-asr-pipeline/punctuator-data/est_punct2 && \
+    echo {} > tmp1 && \
+    python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl tmp1 tmp2 && \
+    rm tmp1 tmp2 || echo "OK";
+
+# cache model for language ID
+RUN cd /opt/est-asr-pipeline/bin && \
+    ./extract_lid_features_kaldi.py foo fii  || echo "OK";
 
 CMD ["/bin/bash"]    
