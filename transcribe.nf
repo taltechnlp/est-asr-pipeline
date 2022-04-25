@@ -10,6 +10,8 @@ audio_file = file(params.in)
 
 
 process to_wav {
+    memory '500MB'
+
     input:
     path audio_file
 
@@ -24,6 +26,8 @@ process to_wav {
 }
 
 process diarization {
+    memory '5GB'
+    
     input:
     file audio
 
@@ -40,6 +44,8 @@ process diarization {
 }
 
 process prepare_initial_data_dir {
+    memory '1GB'
+
     input:
       file show_seg
       file audio
@@ -69,6 +75,8 @@ process prepare_initial_data_dir {
 }
 
 process language_id {
+    memory '4GB'
+    
     input:
       path init_datadir
       file audio    
@@ -113,6 +121,8 @@ process language_id {
 
 
 process mfcc {
+    memory '1GB'
+    
     input:
     path datadir
     file audio    
@@ -142,6 +152,8 @@ process mfcc {
 
 
 process speaker_id {
+    memory '5GB'
+    
     cpus "${params.nthreads}"
     
     input:
@@ -196,6 +208,7 @@ process speaker_id {
 
 // Do 1-pass decoding using chain online models
 process one_pass_decoding {
+    memory '5GB'  
     cpus "${params.nthreads}"
     
     // Do 1-pass decoding using chain online models
@@ -228,6 +241,8 @@ process one_pass_decoding {
 
 
 process rnnlm_rescoring {
+    memory '5GB'
+    
     input:
     
       path pruned_unk from pruned_unk
@@ -257,6 +272,8 @@ process rnnlm_rescoring {
 
 
 process lattice2ctm {
+    memory '4GB'
+    
     input:
       path pruned_rnnlm_unk from pruned_rnnlm_unk
       path datadir_hires
@@ -295,7 +312,8 @@ process lattice2ctm {
 
 
 process to_json {    
-
+    memory '500MB'
+    
     input:
       file segmented_ctm
       file with_compounds_ctm
@@ -326,6 +344,8 @@ process to_json {
 
 
 process punctuation {
+    memory '4GB'
+    
     input:
       file unpunctuated_json
 
@@ -355,7 +375,8 @@ process punctuation {
 
 
 process output {
-
+    memory '500MB'
+    
     publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
