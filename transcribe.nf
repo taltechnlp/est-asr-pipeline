@@ -2,11 +2,18 @@
 
 def env = System.getenv()
 params.in = "/home/aivo_olevi/tmp/ao_1.wav"
+params.our_dir = "results/"
 params.do_music_detection = true
 params.do_speaker_id = true
 params.do_punctuation = true
 params.do_language_id = true
 audio_file = file(params.in)
+
+out_dir = ""
+if (params.out_dir[-1] != "/") {
+  out_dir = params.out_dir + "/"
+}
+else out_dir = params.out_dir
 
 
 process to_wav {
@@ -356,7 +363,7 @@ process punctuation {
 
 process output {
 
-    publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${our_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
       file with_compounds_ctm
@@ -384,7 +391,7 @@ process output {
 
 process empty_output {
 
-    publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
       val a from datadir.ifEmpty{ 'EMPTY' }

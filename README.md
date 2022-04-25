@@ -19,7 +19,6 @@ Pull the required Docker image, containing models and libraries (recommended):
 
     docker pull alumae/est-asr-pipeline:0.1
 
-
 ## Usage
 
 ### Using a prebuilt Docker image
@@ -48,6 +47,7 @@ A successful invocation will result with something like this:
     [b4/04eeee] process > to_json                  [100%] 1 of 1 ✔
     [37/3d7f31] process > punctuation              [100%] 1 of 1 ✔
     [86/90a123] process > output                   [100%] 1 of 1 ✔
+    [d3/23d672] process > empty_output             -
     Completed at: 14-apr-2022 10:55:48
     Duration    : 3m 31s
     CPU hours   : 0.1
@@ -72,6 +72,7 @@ TODO
 Firstly, the main script (transcribe.nf) already has default values for input parameters. All of these can be provided via the command line when executing the script using the nextflow executable. To use a parameter, ignore the 'params.' part and prepend two hyphens '--'. So 'params.in' becomes '--in'. The following parameter should always be provided (unless the default value is satisfactory):
 
 -   --in <filename> - The name and location of the audio recording in you local system that needs to be transcribed.
+-   --out_dir <path> - The path to the directory where results will be stored. By default a relative directory "results/".
 -   `--do_speaker_id true|false` - Include speaker diarization and identification. The result will include speaker names. Some Estonian celebrities and radio personalities will be identified by their name, others will be give ID-s. By default `true`.
 -   `--do_punctuation true|false` - Whether to attempt punctuation recovery and add punctuation to the transcribed text. By default `true`.
 -   `--do_language_id true|false` - Whether to apply a language ID model to discard speech segements that are not in Estonian. By default `true`.
