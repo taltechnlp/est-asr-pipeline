@@ -36,7 +36,7 @@ RUN conda --version
 
 RUN conda install -c conda-forge pynini=2.1.3
 
-RUN conda install pytorch=1.8.1 torchvision torchaudio=0.8.1 cpuonly -c pytorch
+RUN conda install pytorch torchvision torchaudio cpuonly -c pytorch
 
 RUN conda install ruamel.yaml && \
     pip install kaldiio && \
@@ -104,5 +104,14 @@ RUN cd /opt/est-asr-pipeline/punctuator-data/est_punct2 && \
 # cache model for language ID
 RUN cd /opt/est-asr-pipeline/bin && \
     ./extract_lid_features_kaldi.py foo fii  || echo "OK";
+
+# cache model for speech activity detection
+RUN cd /opt/est-asr-pipeline/bin && \
+    ./find_speech_segments.py foo fii  || echo "OK";
+
+
+RUN apt-get install -y procps
+
+
 
 CMD ["/bin/bash"]    

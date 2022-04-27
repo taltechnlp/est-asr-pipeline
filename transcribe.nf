@@ -2,11 +2,17 @@
 
 def env = System.getenv()
 params.in = "/home/aivo_olevi/tmp/ao_1.wav"
-params.do_music_detection = true
+params.out_dir = "results/"
 params.do_speaker_id = true
 params.do_punctuation = true
 params.do_language_id = true
 audio_file = file(params.in)
+
+out_dir = ""
+if (params.out_dir[-1] != "/") {
+  out_dir = params.out_dir + "/"
+}
+else out_dir = params.out_dir
 
 
 process to_wav {
@@ -33,13 +39,12 @@ process diarization {
 
     output: 
     file 'show.seg' into show_seg
-    file 'show.pms.seg' into show_pms_seg 
+    file 'show.uem.seg' into show_uem_seg 
 
-    script:
-        diarization_opts = params.do_music_detection ? '-m' : '' 
+    script:        
         """
-        echo "audio 1 0 1000000000 U U U 1" > show.uem.seg
-        diarization.sh $diarization_opts $audio show.uem.seg
+        find_speech_segments.py $audio show.uem.seg
+        diarization.sh $audio show.uem.seg
         """
 }
 
@@ -65,11 +70,14 @@ process prepare_initial_data_dir {
         start=`echo $LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; printf("%08.3f", $start);'`; \
         end=`echo $LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; $len=$t[1]/100.0; $end=$start+$len; printf("%08.3f", $end);'`; \
         sp_id=`echo $LINE | cut -f 3 -d " "`; \
-        echo audio-${sp_id}---${start}-${end} audio $start $end; \
+        if  [ ${end} != ${start} ]; then \
+          echo audio-${sp_id}---${start}-${end} audio $start $end; \
+        fi
       done > init_datadir/segments
       cat init_datadir/segments | perl -npe 's/\\s+.*//; s/((.*)---.*)/\\1 \\2/' > init_datadir/utt2spk
       utils/utt2spk_to_spk2utt.pl init_datadir/utt2spk > init_datadir/spk2utt
       echo "audio !{audio}" > init_datadir/wav.scp
+      
     fi
     '''
 }
@@ -318,28 +326,21 @@ process to_json {
       file segmented_ctm
       file with_compounds_ctm
       file sid_result
-      file show_pms_seg
+      file show_uem_seg
 
     output:
       file "unpunctuated.json" into unpunctuated_json
 
     shell:
-      if (params.do_speaker_id && params.do_music_detection)
+      if (params.do_speaker_id)
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} --pms-seg !{show_pms_seg} !{segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
           """
-      else if (params.do_speaker_id && !params.do_music_detection )
+      else 
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} !{segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
           """
-      else if (!params.do_speaker_id  && params.do_music_detection)
-          """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_pms_seg} !{segmented_ctm} > unpunctuated.json
-          """
-      else
-          """
-          python3 !{projectDir}/bin/segmented_ctm2json.py !{segmented_ctm} > unpunctuated.json
-          """
+
 }
 
 
@@ -377,7 +378,7 @@ process punctuation {
 process output {
     memory '500MB'
     
-    publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
       file with_compounds_ctm
@@ -405,7 +406,7 @@ process output {
 
 process empty_output {
 
-    publishDir "results/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}/${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
       val a from datadir.ifEmpty{ 'EMPTY' }
