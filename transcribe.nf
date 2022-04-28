@@ -17,6 +17,7 @@ else out_dir = params.out_dir
 
 process to_wav {
     memory '500MB'
+    cpus 2
 
     input:
     path audio_file
@@ -26,7 +27,7 @@ process to_wav {
     
     shell:
         """
-        ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k 
+        time (ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k )
         """
 
 }
@@ -162,7 +163,7 @@ process mfcc {
 process speaker_id {
     memory '5GB'
     
-    cpus "${params.nthreads}"
+    cpus params.nthreads
     
     input:
       path datadir
@@ -217,7 +218,7 @@ process speaker_id {
 // Do 1-pass decoding using chain online models
 process one_pass_decoding {
     memory '5GB'  
-    cpus "${params.nthreads}"
+    cpus params.nthreads * 2
     
     // Do 1-pass decoding using chain online models
     input:
@@ -281,6 +282,7 @@ process rnnlm_rescoring {
 
 process lattice2ctm {
     memory '4GB'
+    cpus 2
     
     input:
       path pruned_rnnlm_unk from pruned_rnnlm_unk
