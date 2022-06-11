@@ -27,7 +27,7 @@ process to_wav {
     
     shell:
         """
-        time (ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k )
+        ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k
         """
 
 }
@@ -85,6 +85,7 @@ process prepare_initial_data_dir {
 
 process language_id {
     memory '4GB'
+    label 'with_gpu'
     
     input:
       path init_datadir
@@ -98,7 +99,7 @@ process language_id {
       '''
       . !{projectDir}/bin/prepare_process.sh
       
-      extract_lid_features_kaldi.py !{init_datadir} .
+      extract_lid_features_kaldi.py --use-gpu !{init_datadir} .
       cat !{init_datadir}/segments | awk '{print($1, "0")}' > trials
       threshold=`cat !{params.rootdir}/models/lid_et/threshold`
       ivector-subtract-global-mean !{params.rootdir}/models/lid_et/xvector.global.vec scp:xvector.scp ark:- | \
@@ -127,35 +128,6 @@ process language_id {
       '''
 }
     
-
-
-process mfcc {
-    memory '1GB'
-    
-    input:
-    path datadir
-    file audio    
-
-    output:
-    path 'datadir_hires' into datadir_hires
-    path 'ivectors' into ivectors
-
-    shell:
-    '''
-    . !{projectDir}/bin/prepare_process.sh
-	
-    utils/copy_data_dir.sh !{datadir} datadir_hires
-    steps/make_mfcc.sh --nj 1 \
-        --mfcc-config !{params.rootdir}/build/fst/!{params.acoustic_model}/conf/mfcc.conf \
-        datadir_hires || exit 1
-    steps/compute_cmvn_stats.sh datadir_hires || exit 1
-    utils/fix_data_dir.sh datadir_hires
-
-    steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
-      datadir_hires !{params.rootdir}/build/fst/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
-    '''
-}
-
 
 
 
@@ -215,107 +187,121 @@ process speaker_id {
 
 
 
-// Do 1-pass decoding using chain online models
-process one_pass_decoding {
-    memory '5GB'  
-    cpus params.nthreads * 2
-    
-    // Do 1-pass decoding using chain online models
+process decode {
+    memory '16GB'
+    cpus 1
+    label 'with_gpu'
+
     input:
+      path datadir
+      file audio    
+      
+    output:
+      file 'trans.hyp' into trans_hyp
+      
+    shell:
+      '''
+      . !{projectDir}/bin/prepare_process.sh
+      
+      extract_segments_to_wavs.sh --nj 1 !{datadir} data_segmented data_segmented/wav
+      
+      echo "." > test.tsv
+      
+      awk \'{print($2)}\' data_segmented/wav.scp > wav_locations.tmp
+      
+      awk \'{print($2)}\' data_segmented/wav.scp | xargs soxi -s | paste wav_locations.tmp - >> test.tsv
+      
+      awk \'{print("")}\' data_segmented/wav.scp > test.ltr
+      
+      python ${FAIRSEQ_ROOT}/examples/speech_recognition/infer.py \
+        . \
+        --batch-size 1 \
+        --task audio_finetuning  \
+        --path !{params.rootdir}/models/fairseq/xls-r-960M-1h/checkpoint_best.pt \
+        --results-path . \
+        --w2l-decoder kenlm --lm-weight 1.0 --word-score 0.0 --sil-weight 0 --lm-model  !{params.rootdir}/models/fairseq/xls-r-960M-1h/interpolated.4g.arpa.bin \
+        --criterion ctc --labels ltr \
+        --max-tokens 4000000 --post-process sentencepiece \
+        --gen-subset test \
+        --lexicon !{params.rootdir}/models/fairseq/xls-r-960M-1h/lexicon \
+        --beam 20 --normalize 	      
+      
+      cut -f 1 -d " " data_segmented/wav.scp > uttids
+      python ${FAIRSEQ_ROOT}/scripts/spm_decode.py --model !{params.rootdir}/models/fairseq/xls-r-960M-1h/spm.model --input hypo.units-checkpoint_best.pt-test.txt | \
+        perl -npe \'s/\\|/ /g;\' | \
+        perl -npe \'s/(.*)(\\(\\S+\\))$/\\2 \\1/\' | perl -npe \'s/\\(None-(\\d+)\\)/\\1/\' | sort -n | cut -f 2- -d \' \' | \
+        paste uttids - > trans.hyp
+
+      '''
+}
+
+
+
+process mfcc {
+    memory '1GB'
+    
+    input:
+    path datadir
+    file audio    
+
+    output:
+    path 'datadir_hires' into datadir_hires
+    path 'ivectors' into ivectors
+
+    shell:
+    '''
+    . !{projectDir}/bin/prepare_process.sh
+	
+    utils/copy_data_dir.sh !{datadir} datadir_hires
+    steps/make_mfcc.sh --nj 1 \
+        --mfcc-config !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf/mfcc.conf \
+        datadir_hires || exit 1
+    steps/compute_cmvn_stats.sh datadir_hires || exit 1
+    utils/fix_data_dir.sh datadir_hires
+
+    steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
+      datadir_hires !{params.rootdir}/kaldi-data/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
+    '''
+}
+
+process hyp2ctm {
+    memory '4GB'
+    cpus 1
+    label 'with_gpu'
+    
+    input:
+      file trans_hyp
       path datadir_hires
       path ivectors
-      //path build from params.build_dir 
-      path conf from "$projectDir/conf"
-	
-    output:
-      path "${params.acoustic_model}_pruned_unk" into pruned_unk
-   
-    
-    shell:
-      '''
-      . !{projectDir}/bin/prepare_process.sh
-      
-      mkdir -p !{params.acoustic_model}_pruned_unk
-      for f in !{params.rootdir}/build/fst/!{params.acoustic_model}/?*; do ln -s $f !{params.acoustic_model}_pruned_unk/; done
-
-      steps/nnet3/decode.sh  --nj 1 --num-threads !{params.nthreads} --acwt 1.0  --post-decode-acwt 10.0 \
-        --skip-scoring true \
-        --online-ivector-dir ivectors \
-        --skip-diagnostics true \
-        !{params.rootdir}/build/fst/!{params.acoustic_model}/graph_prunedlm_unk datadir_hires !{params.acoustic_model}_pruned_unk/decode || exit 1;
-      ln -s !{params.rootdir}/build/fst/!{params.acoustic_model}/graph_prunedlm_unk !{params.acoustic_model}_pruned_unk/graph
-        
-      '''
-}
-
-
-process rnnlm_rescoring {
-    memory '5GB'
-    
-    input:
-    
-      path pruned_unk from pruned_unk
-      path datadir_hires
-
-    output:
-      path "${params.acoustic_model}_pruned_rnnlm_unk" into pruned_rnnlm_unk
-
-    shell:
-      '''
-      . !{projectDir}/bin/prepare_process.sh
-      
-      mkdir -p !{params.acoustic_model}_pruned_rnnlm_unk	
-      for f in !{params.rootdir}/build/fst/!{params.acoustic_model}/*; do ln -s $f !{params.acoustic_model}_pruned_rnnlm_unk/; done
-        rnnlm/lmrescore_pruned.sh \
-        --skip-scoring true \
-        --max-ngram-order 4 \
-        !{params.rootdir}/build/fst/data/prunedlm_unk \
-        !{params.rootdir}/build/fst/data/rnnlm_unk \
-        datadir_hires \
-      !{pruned_unk}/decode \
-        !{params.acoustic_model}_pruned_rnnlm_unk/decode
-      cp -r --preserve=links !{params.acoustic_model}_pruned_unk/graph !{params.acoustic_model}_pruned_rnnlm_unk/
-      '''
-}
-
-
-
-process lattice2ctm {
-    memory '4GB'
-    cpus 2
-    
-    input:
-      path pruned_rnnlm_unk from pruned_rnnlm_unk
-      path datadir_hires
 
     output:
       file 'segmented.ctm' into segmented_ctm
-      file 'with-compounds.ctm' into with_compounds_ctm
 
     shell:
       '''
       . !{projectDir}/bin/prepare_process.sh
+      mkdir dict
+    	cp -r !{params.rootdir}/kaldi-data/dict .
+      rm -f dict/lexicon*.txt
+      echo "<unk>   UNK" > dict/lexicon.txt
+      echo "<sil>   SIL" >> dict/lexicon.txt
+      cat !{trans_hyp}  | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
+        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g;' >> dict/lexicon.txt
       
-      frame_shift_opt=""
-      if [ -f !{pruned_rnnlm_unk}/frame_subsampling_factor ]; then
-        factor=`cat !{pruned_rnnlm_unk}/frame_subsampling_factor`
-        frame_shift_opt="--frame-shift 0.0$factor"; 
-      fi; 
+      utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
+      cp -r !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf .
+      utils/copy_data_dir.sh !{datadir_hires} datadir_hires_hyp
       
-      get_ctm_unk.sh --use_segments false $frame_shift_opt \
-        --unk-p2g-cmd "python3 !{projectDir}/bin/unk_p2g.py --p2g-cmd \'python3 /opt/et-g2p-fst/g2p.py --inverse --fst /opt/et-g2p-fst/data/chars.fst --nbest 1\'" \
-        --unk-word "<unk>" \
-        --min-lmwt !{params.lm_scale} \
-        --max-lmwt !{params.lm_scale} \
-        datadir_hires !{pruned_rnnlm_unk}/graph !{pruned_rnnlm_unk}/decode
-
-      cat !{pruned_rnnlm_unk}/decode/score_!{params.lm_scale}/datadir_hires.ctm  | perl -npe "s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/" > segmented.splitw2.ctm
-
-      python3 !{projectDir}/bin/compound-ctm.py \
-        "python3 !{projectDir}/bin/compounder.py !{params.rootdir}/build/fst/data/compounderlm/G.fst !{params.rootdir}/build/fst/data/compounderlm/words.txt" \
-        < segmented.splitw2.ctm > with-compounds.ctm
+      cp !{trans_hyp} datadir_hires_hyp/text
+      steps/nnet3/align.sh --use-gpu true --nj 1 --online-ivector-dir !{ivectors} \
+        --scale-opts '--transition-scale=1.0 --self-loop-scale=1.0 --acoustic-scale=1.0' \
+        datadir_hires_hyp lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali
+        
+      steps/get_train_ctm.sh --frame-shift 0.03 --use-segments false \
+        datadir_hires_hyp lang ali .
+      cat ctm | perl -npe "s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/" | sort -k1,1 -k 3,3g >  segmented.ctm
+        
       
-      cat with-compounds.ctm | grep -v "++" |  grep -v "\\[sil\\]" | grep -v -e " \$" | perl -npe "s/\\+//g" | sort -k1,1 -k 3,3g > segmented.ctm    
       '''
 }
 
@@ -326,7 +312,6 @@ process to_json {
     
     input:
       file segmented_ctm
-      file with_compounds_ctm
       file sid_result
       file show_uem_seg
 
@@ -383,24 +368,21 @@ process output {
     publishDir "${out_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
 
     input:
-      file with_compounds_ctm
       file punctuated_json
+      file segmented_ctm
 
     output:
       file "result.json" into result_json
       file "result.srt" into result_srt
       file "result.trs" into result_trs
       file "result.ctm" into result_ctm
-      file "result.with-compounds.ctm" into result_with_compounds_ctm
 
     script:
       json = punctuated_json
       """
       normalize_json.py words2numbers.py $json > result.json
 
-      cat $with_compounds_ctm | unsegment-ctm.py | LC_ALL=C sort -k 1,1 -k 3,3n -k 4,4n > with-compounds.synced.ctm
-      cat with-compounds.synced.ctm | grep -v \"<\" > result.ctm
-      cat result.ctm | ctm2with-sil-ctm.py > result.with-compounds.ctm
+      cat $segmented_ctm | unsegment-ctm.py | LC_ALL=C sort -k 1,1 -k 3,3n -k 4,4n > result.ctm
       json2trs.py --fid trs $json > result.trs
       json2srt.py result.json > result.srt
       """
@@ -421,7 +403,6 @@ process empty_output {
       file "result.srt" into empty_result_srt
       file "result.trs" into empty_result_trs
       file "result.ctm" into empty_result_ctm
-      file "result.with-compounds.ctm" into empty_result_with_compounds_ctm
 
     script:
       json = file("assets/empty.json")
@@ -429,7 +410,7 @@ process empty_output {
       """
       cp $json result.json
       json2trs.py $json > result.trs      
-      touch result.srt result.ctm result.with-compounds.ctm
+      touch result.srt result.ctm 
       """
 }
 
