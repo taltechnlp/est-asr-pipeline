@@ -345,12 +345,12 @@ process punctuation {
         '''
         WORK_DIR=$PWD
         cd !{params.rootdir}/punctuator-data/est_punct2
-        TEMP_FILE1=$(mktemp); 
-        TEMP_FILE2=$(mktemp);
-        cat $WORK_DIR/!{unpunctuated_json} > TEMP_FILE1 
-        python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
-        cat TEMP_FILE2 > $WORK_DIR/punctuated.json
-        rm TEMP_FILE1 TEMP_FILE2 
+        TEMP_FILE1=$WORK_DIR/tmp1
+        TEMP_FILE2=$WORK_DIR/tmp2
+        cat $WORK_DIR/!{unpunctuated_json} > $TEMP_FILE1 
+        python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl $TEMP_FILE1 $TEMP_FILE2  
+        cat $TEMP_FILE2 > $WORK_DIR/punctuated.json
+        #rm TEMP_FILE1 TEMP_FILE2 
         cd $WORK_DIR
         '''
       else
