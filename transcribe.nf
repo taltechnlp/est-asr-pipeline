@@ -287,7 +287,7 @@ process hyp2ctm {
       echo "<unk>   UNK" > dict/lexicon.txt
       echo "<sil>   SIL" >> dict/lexicon.txt
       cat !{trans_hyp}  | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
-        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g;' >> dict/lexicon.txt
+        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g;' | uniq >> dict/lexicon.txt
       
       utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
       cp -r !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf .
