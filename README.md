@@ -17,7 +17,7 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 
 Pull the required Docker image, containing models and libraries (recommended):
 
-    docker pull alumae/est-asr-pipeline:0.1
+    docker pull alumae/est-asr-pipeline:0.1.4
 
 ## Usage
 
