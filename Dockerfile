@@ -60,7 +60,7 @@ WORKDIR /opt
   
 RUN git clone https://github.com/alumae/et-g2p.git && \
     cd /opt/et-g2p && \
-    ant jar
+    ant dist
     
 
 RUN git clone https://github.com/pytorch/fairseq && \

@@ -39,13 +39,15 @@ process diarization {
     file audio
 
     output: 
-    file 'show.seg' into show_seg
+    file 'show.seg' into show_seg optional true
     file 'show.uem.seg' into show_uem_seg 
 
     script:        
         """
         find_speech_segments.py $audio show.uem.seg
-        diarization.sh $audio show.uem.seg
+        if [ -s show.uem.seg ]; then
+			diarization.sh $audio show.uem.seg
+		fi
         """
 }
 
