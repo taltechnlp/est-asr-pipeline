@@ -71,8 +71,8 @@ process prepare_initial_data_dir {
       cat !{show_seg} | cut -f "3,4,8" -d " " | \
       while read LINE ; do \
         len_in_frames=`echo $LINE | cut -f 2 -d " "`; \
-        start=`echo $LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; printf("%08.3f", $start);'`; \
-        end=`echo $LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; $len=$t[1]/100.0; $end=$start+$len; printf("%08.3f", $end);'`; \
+        start=`echo $LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; printf("%09.3f", $start);'`; \
+        end=`echo $LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; $len=$t[1]/100.0; $end=$start+$len; printf("%09.3f", $end);'`; \
         sp_id=`echo $LINE | cut -f 3 -d " "`; \
         if  [ ${len_in_frames} -gt 30 ]; then \
           echo audio-${sp_id}---${start}-${end} audio $start $end; \
