@@ -1,15 +1,17 @@
 #!/usr/bin/env nextflow
 
 def env = System.getenv()
-params.in = "/home/aivo_olevi/tmp/ao_1.wav"
-params.out_dir = "results/"
+params.out_dir = ""
 params.do_speaker_id = true
 params.do_punctuation = true
 params.do_language_id = true
 audio_file = file(params.in)
 
 out_dir = ""
-if (params.out_dir[-1] != "/") {
+if (params.out_dir == "") {
+  out_dir = "/results/${audio_file.baseName}/"
+}
+else if (params.out_dir[-1] != "/") {
   out_dir = params.out_dir + "/"
 }
 else out_dir = params.out_dir
@@ -156,10 +158,6 @@ process mfcc {
     '''
 }
 
-
-
-
-
 process speaker_id {
     memory '5GB'
     
@@ -218,7 +216,7 @@ process speaker_id {
 // Do 1-pass decoding using chain online models
 process one_pass_decoding {
     memory '5GB'  
-    cpus params.nthreads * 2
+    cpus params.nthreads
     
     // Do 1-pass decoding using chain online models
     input:
@@ -380,7 +378,7 @@ process punctuation {
 process output {
     memory '500MB'
     
-    publishDir "${out_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}", mode: 'copy', overwrite: true
 
     input:
       file with_compounds_ctm
@@ -408,7 +406,7 @@ process output {
 
 process empty_output {
 
-    publishDir "${out_dir}/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}", mode: 'copy', overwrite: true
 
     input:
       val a from datadir.ifEmpty{ 'EMPTY' }
