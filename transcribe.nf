@@ -23,7 +23,7 @@ process to_wav {
     path audio_file
 
     output:
-    file 'audio.wav' into audio
+    file 'audio.wav' glob false into audio
     
     shell:
         """
@@ -71,8 +71,8 @@ process prepare_initial_data_dir {
       cat !{show_seg} | cut -f "3,4,8" -d " " | \
       while read LINE ; do \
         len_in_frames=`echo $LINE | cut -f 2 -d " "`; \
-        start=`echo $LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; printf("%08.3f", $start);'`; \
-        end=`echo $LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; $len=$t[1]/100.0; $end=$start+$len; printf("%08.3f", $end);'`; \
+        start=`echo $LINE | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; printf("%09.3f", $start);'`; \
+        end=`echo $LINE   | cut -f 1,2 -d " " | perl -ne '@t=split(); $start=$t[0]/100.0; $len=$t[1]/100.0; $end=$start+$len; printf("%09.3f", $end);'`; \
         sp_id=`echo $LINE | cut -f 3 -d " "`; \
         if  [ ${len_in_frames} -gt 30 ]; then \
           echo audio-${sp_id}---${start}-${end} audio $start $end; \
@@ -291,7 +291,7 @@ process hyp2ctm {
       echo "<unk>   UNK" > dict/lexicon.txt
       echo "<sil>   SIL" >> dict/lexicon.txt
       cat !{trans_hyp}  | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
-        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g;' | uniq >> dict/lexicon.txt
+        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g; s/(\\s)pppp\\b/\\1pp/g;  ' | uniq >> dict/lexicon.txt
       
       utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
       cp -r !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf .
@@ -327,11 +327,11 @@ process to_json {
     shell:
       if (params.do_speaker_id)
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/segmented_ctm2json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
           """
       else 
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/segmented_ctm2json.py  --new-turn-sil-length 1.0 --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
           """
 
 }
