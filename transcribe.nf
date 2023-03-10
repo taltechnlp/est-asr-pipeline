@@ -216,7 +216,8 @@ process decode {
       
       awk \'{print("")}\' data_segmented/wav.scp > test.ltr
       
-      python ${FAIRSEQ_ROOT}/examples/speech_recognition/infer.py \
+      
+      PYTHONPATH=${FAIRSEQ_ROOT} python ${FAIRSEQ_ROOT}/examples/speech_recognition/infer.py \
         . \
         --batch-size 1 \
         --task audio_finetuning  \
@@ -283,6 +284,7 @@ process hyp2ctm {
     shell:
       '''
       . !{projectDir}/bin/prepare_process.sh
+      nvidia-smi
       mkdir dict
     	cp -r !{params.rootdir}/kaldi-data/dict .
       rm -f dict/lexicon*.txt
@@ -296,6 +298,7 @@ process hyp2ctm {
       utils/copy_data_dir.sh !{datadir_hires} datadir_hires_hyp
       
       cp !{trans_hyp} datadir_hires_hyp/text
+      
       steps/nnet3/align.sh --use-gpu true --nj 1 --online-ivector-dir !{ivectors} \
         --scale-opts '--transition-scale=1.0 --self-loop-scale=1.0 --acoustic-scale=1.0' \
         datadir_hires_hyp lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali

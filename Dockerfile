@@ -44,7 +44,8 @@ RUN wget \
 
 RUN conda --version
 
-RUN conda install pytorch torchvision torchaudio cudatoolkit=10.2 -c pytorch
+RUN conda install pytorch==1.12.0 torchvision==0.13.0 torchaudio==0.12.0 cudatoolkit=10.2 -c pytorch
+
 
 RUN conda install ruamel.yaml && \
     pip install kaldiio && \
@@ -69,7 +70,7 @@ RUN git clone https://github.com/pytorch/fairseq && \
     pip install --editable ./
     
     
-RUN apt-get -y install -y build-essential libboost-system-dev libboost-thread-dev libboost-program-options-dev libboost-test-dev libeigen3-dev zlib1g-dev libbz2-dev liblzma-dev libatlas-dev libfftw3-dev
+RUN apt-get -y install -y build-essential libboost-system-dev libboost-thread-dev libboost-program-options-dev libboost-test-dev libeigen3-dev zlib1g-dev libbz2-dev liblzma-dev libatlas-base-dev libfftw3-dev
 
 
 RUN apt-get update && \
@@ -100,7 +101,7 @@ RUN git clone https://github.com/flashlight/flashlight.git && \
 
 
 ENV HOME /opt
-ENV LD_LIBRARY_PATH /usr/local/lib
+ENV LD_LIBRARY_PATH /usr/local/lib:${LD_LIBRARY_PATH}
 
 RUN ln -s -f /usr/bin/python2 /usr/bin/python && \
     apt-get install -y python-numpy python-scipy python3-simplejson python3-pytest && \
@@ -148,6 +149,7 @@ COPY models /opt/est-asr-pipeline/models
 
 RUN apt-get install -y procps
 
-RUN conda install -c conda-forge pynini=2.1.3
+RUN conda install -c conda-forge pynini=2.1.5
+
 
 CMD ["/bin/bash"]    
