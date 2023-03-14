@@ -1,3 +1,4 @@
+rm -rf utils steps sid rnnlm
 ln -s ${KALDI_ROOT}/egs/wsj/s5/utils
 ln -s ${KALDI_ROOT}/egs/wsj/s5/steps
 ln -s ${KALDI_ROOT}/egs/sre08/v1/sid
