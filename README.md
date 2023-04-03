@@ -4,7 +4,7 @@ This project uses the Nextflow workflow engine to transcribe Estonian speech rec
 
 Nextflow offers great support for container technologies like Docker and different cluster and cloud environments as well as Kubernetes.
 
-*This pipeline requires aserver with a failry modern NViudia GPU!*
+*This pipeline requires a server with a fairly modern NViudia GPU!*
 
 ## Installation
 
