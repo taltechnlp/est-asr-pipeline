@@ -37,7 +37,7 @@ containing all the needed models and libraries is automatically pulled from the 
 
 A successful invocation will result with something like this:
 
-    $ nextflow run transcribe.nf -w /flash1/home/tanel/devel/est-asr-pipeline/work --in /path/to/some_audiofile.mp3  -profile docker
+    $ nextflow run transcribe.nf -profile docker --in /path/to/some_audiofile.mp3
     N E X T F L O W  ~  version 21.10.6
     Launching `transcribe.nf` [festering_crick] - revision: ee9a3dc173
     executor >  local (11)
