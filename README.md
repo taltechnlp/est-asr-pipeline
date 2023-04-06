@@ -6,7 +6,8 @@ Nextflow offers great support for container technologies like Docker and differe
 
 ## Installation
 
-The project uses Nextflow which depends mainly on Java. Both should be installed locally.
+The project uses Nextflow which depends mainly on Java. Both should be installed locally. Nextflow 22.10.x or earlier has to be used, newer versions will not work at the moment!
+
 The pre-built model, scripts and Kaldi tookit is consumed via Docker and so Docker also needs to be installed.
 
 This configuration has only been used on Linux. Because of Docker use other OS-s could be possible but because of configuration tricks used in the nextflow.config files, Dockerizing this project might be easiest.
