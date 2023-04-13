@@ -107,11 +107,6 @@ RUN cd /opt/est-asr-pipeline/punctuator-data/est_punct2 && \
 RUN cd /opt/est-asr-pipeline/bin && \
     ./extract_lid_features_kaldi.py foo fii  || echo "OK";
 
-# cache model for speech activity detection
-RUN cd /opt/est-asr-pipeline/bin && \
-    ./find_speech_segments.py foo fii  || echo "OK";
-
-
 RUN apt-get install -y procps
 
 

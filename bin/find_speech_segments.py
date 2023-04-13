@@ -21,9 +21,9 @@ if __name__ == '__main__':
   
   USE_ONNX = False # change this to True if you want to test onnx model
   
-  model, utils = torch.hub.load(repo_or_dir='snakers4/silero-vad',
+  model, utils = torch.hub.load(repo_or_dir='/opt/silero-vad/',
+                                source='local',
                                 model='silero_vad',
-                                force_reload=False,
                                 onnx=USE_ONNX)
 
   (get_speech_timestamps,
