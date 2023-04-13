@@ -49,6 +49,8 @@ WORKDIR /opt
   
 RUN git clone https://github.com/alumae/et-g2p-fst.git    
 
+RUN git clone -b 'v4.0' --single-branch --depth 1 https://github.com/snakers4/silero-vad.git
+
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y locales
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
