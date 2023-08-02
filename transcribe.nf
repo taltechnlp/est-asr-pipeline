@@ -189,14 +189,32 @@ process speaker_id {
 }
 
 
+process prepare_data_for_whisper {
+    memory '2GB'
+    cpus 1
 
-process decode {
-    memory '16GB'
+    input:
+      path datadir
+      
+    output:
+      path 'datadir_25sec' into datadir_25sec optional true
+      
+    shell:
+      '''
+      mkdir datadir_25sec      
+      merge_consecutive_segments.py --max_duration 25 datadir datadir_25sec      
+      cp datadir/wav.scp datadir_25sec/wav.scp
+      '''
+}
+
+
+process decode_whisper {
+    memory '8GB'
     cpus 1
     label 'with_gpu'
 
     input:
-      path datadir
+      path datadir_25sec
       file audio    
       
     output:
@@ -204,112 +222,31 @@ process decode {
       
     shell:
       '''
-      . !{projectDir}/bin/prepare_process.sh
-      
-      extract_segments_to_wavs.sh --nj 1 !{datadir} data_segmented data_segmented/wav
-      
-      echo "." > test.tsv
-      
-      awk \'{print($2)}\' data_segmented/wav.scp > wav_locations.tmp
-      
-      awk \'{print($2)}\' data_segmented/wav.scp | xargs soxi -s | paste wav_locations.tmp - >> test.tsv
-      
-      awk \'{print("")}\' data_segmented/wav.scp > test.ltr
-      
-      
-      PYTHONPATH=${FAIRSEQ_ROOT} python ${FAIRSEQ_ROOT}/examples/speech_recognition/infer.py \
-        . \
-        --batch-size 1 \
-        --task audio_finetuning  \
-        --path !{params.rootdir}/models/fairseq/xls-r-960M-1h/checkpoint_best.pt \
-        --results-path . \
-        --w2l-decoder kenlm --lm-weight 1.0 --word-score 0.0 --sil-weight 0 --lm-model  !{params.rootdir}/models/fairseq/xls-r-960M-1h/interpolated.4g.arpa.bin \
-        --criterion ctc --labels ltr \
-        --max-tokens 4000000 --post-process sentencepiece \
-        --gen-subset test \
-        --lexicon !{params.rootdir}/models/fairseq/xls-r-960M-1h/lexicon \
-        --beam 20 --normalize 	      
-      
-      cut -f 1 -d " " data_segmented/wav.scp > uttids
-      python ${FAIRSEQ_ROOT}/scripts/spm_decode.py --model !{params.rootdir}/models/fairseq/xls-r-960M-1h/spm.model --input hypo.units-checkpoint_best.pt-test.txt | \
-        perl -npe \'s/\\|/ /g;\' | \
-        perl -npe \'s/(.*)(\\(\\S+\\))$/\\2 \\1/\' | perl -npe \'s/\\(None-(\\d+)\\)/\\1/\' | sort -n | cut -f 2- -d \' \' | \
-        paste uttids - > trans.hyp
-
+      whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
       '''
 }
 
-
-
-process mfcc {
-    memory '1GB'
-    
-    input:
-    path datadir
-    file audio    
-
-    output:
-    path 'datadir_hires' into datadir_hires
-    path 'ivectors' into ivectors
-
-    shell:
-    '''
-    . !{projectDir}/bin/prepare_process.sh
-	
-    utils/copy_data_dir.sh !{datadir} datadir_hires
-    steps/make_mfcc.sh --nj 1 \
-        --mfcc-config !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf/mfcc.conf \
-        datadir_hires || exit 1
-    steps/compute_cmvn_stats.sh datadir_hires || exit 1
-    utils/fix_data_dir.sh datadir_hires
-
-    steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
-      datadir_hires !{params.rootdir}/kaldi-data/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
-    '''
-}
-
-process hyp2ctm {
-    memory '4GB'
+process align {
+    memory '8GB'
     cpus 1
     label 'with_gpu'
-    
+
     input:
-      file trans_hyp
-      path datadir_hires
-      path ivectors
-
+      path datadir_25sec
+      file trans_hyp    
+      file audio    
+      
     output:
-      file 'segmented.ctm' into segmented_ctm
-
+      file 'alignments.json' into alignments_json
+      
     shell:
       '''
-      . !{projectDir}/bin/prepare_process.sh
-      nvidia-smi
-      mkdir dict
-    	cp -r !{params.rootdir}/kaldi-data/dict .
-      rm -f dict/lexicon*.txt
-      echo "<unk>   UNK" > dict/lexicon.txt
-      echo "<sil>   SIL" >> dict/lexicon.txt
-      cat !{trans_hyp}  | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
-        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g; s/(\\s)pppp\\b/\\1pp/g;  ' | uniq >> dict/lexicon.txt
-      
-      utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
-      cp -r !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf .
-      utils/copy_data_dir.sh !{datadir_hires} datadir_hires_hyp
-      
-      cp !{trans_hyp} datadir_hires_hyp/text
-      
-      steps/nnet3/align.sh --use-gpu true --nj 1 --online-ivector-dir !{ivectors} \
-        --scale-opts '--transition-scale=1.0 --self-loop-scale=1.0 --acoustic-scale=1.0' \
-        datadir_hires_hyp lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali
-        
-      steps/get_train_ctm.sh --frame-shift 0.03 --use-segments false \
-        datadir_hires_hyp lang ali .
-      cat ctm | perl -npe "s/(.*)-(S\\d+)---(\\S+)/\\1_\\3_\\2/" | sort -k1,1 -k 3,3g >  segmented.ctm
-        
-      
+      cp -r datadir_25sec datadir_25sec_transcribed
+      cat !{trans_hyp}  > datadir_25sec_transcribed/text
+      create_ctc_alignments.py !{params.rootdir}/models/hf/xls-r-300m-et datadir_25sec_transcribed alignments.json
       '''
 }
+
 
 
 
@@ -317,25 +254,28 @@ process to_json {
     memory '500MB'
     
     input:
-      file segmented_ctm
-      file sid_result
+      path datadir
       file show_uem_seg
+      file sid_result
+      file alignments_json
 
     output:
-      file "unpunctuated.json" into unpunctuated_json
+      file "punctuated.json" into punctuated_json
 
     shell:
       if (params.do_speaker_id)
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
+          # foo
+          python3 !{projectDir}/bin/resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{datadir} !{alignments_json} > punctuated.json
           """
       else 
           """
-          python3 !{projectDir}/bin/segmented_ctm2json.py  --new-turn-sil-length 1.0 --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
+          python3 !{projectDir}/bin/resegment_json.py --new-turn-sil-length 1.0 --pms-seg !{show_uem_seg} !{datadir} !{alignments_json} > punctuated.json
           """
 
 }
 
+/*
 
 process punctuation {
     memory '4GB'
@@ -363,7 +303,7 @@ process punctuation {
         '''
         cp !{unpunctuated_json} punctuated.json
         '''
-}
+}*/
 
 
 
@@ -375,21 +315,20 @@ process output {
 
     input:
       file punctuated_json
-      file segmented_ctm
+      //file result_ctm
 
     output:
       file "result.json" into result_json
       file "result.srt" into result_srt
       file "result.trs" into result_trs
-      file "result.ctm" into result_ctm
+      //file "result.ctm" into result_ctm
 
     script:
       json = punctuated_json
       """
-      normalize_json.py words2numbers.py $json > result.json
+      normalize_json.py words2numbers.py $punctuated_json > result.json
 
-      cat $segmented_ctm | unsegment-ctm.py | LC_ALL=C sort -k 1,1 -k 3,3n -k 4,4n > result.ctm
-      json2trs.py --fid trs $json > result.trs
+      json2trs.py --fid trs $punctuated_json > result.trs
       json2srt.py result.json > result.srt
       """
 }
@@ -419,4 +358,5 @@ process empty_output {
       touch result.srt result.ctm 
       """
 }
+
 

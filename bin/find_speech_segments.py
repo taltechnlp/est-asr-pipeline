@@ -6,6 +6,9 @@ import argparse
 import torch
 torch.set_num_threads(1)
 
+import torchaudio
+torchaudio.set_audio_backend("sox_io")
+
 import os
 from pathlib import Path
 
