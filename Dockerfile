@@ -109,6 +109,8 @@ RUN cd /opt/est-asr-pipeline/bin && \
 
 RUN apt-get install -y procps
 
-
+# cache model for speech activity detection
+RUN cd /opt/est-asr-pipeline/bin && \
+    ./find_speech_segments.py foo fii  || echo "OK";
 
 CMD ["/bin/bash"]    
