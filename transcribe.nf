@@ -46,8 +46,8 @@ process diarization {
         """
         find_speech_segments.py $audio show.uem.seg
         if [ -s show.uem.seg ]; then
-			diarization.sh $audio show.uem.seg
-		fi
+          diarization.sh $audio show.uem.seg
+        fi
         """
 }
 
@@ -136,14 +136,13 @@ process language_id {
 
 
 process speaker_id {
-    memory '5GB'
+    memory '2GB'
+    label 'with_gpu'
     
-    cpus params.nthreads
-    
+   
     input:
       path datadir
       file audio    
-      path conf from "$projectDir/conf"
 
     output:
       file 'sid-result.json' into sid_result
@@ -151,36 +150,11 @@ process speaker_id {
     shell:
         if (params.do_speaker_id)
           '''
-          . !{projectDir}/bin/prepare_process.sh
-          ln -v -s !{params.rootdir}/kaldi-data
-          ln -v -s !{params.rootdir}/build
-
-          utils/copy_data_dir.sh !{datadir} datadir_sid
+          spk_id.sh --device 1 --accelerator gpu --load-checkpoint !{params.rootdir}/models/spk_id/version_295816/checkpoints/last.ckpt \
+            --predict-datadir datadir --predictions-file spk_preds.txt --segments-per-spk 10
           
-          # MFCC for Speaker ID, since the features for MFCC are different from speech recognition
-          steps/make_mfcc.sh --nj 1 \
-              --mfcc-config kaldi-data/sid/mfcc_sid.conf \
-              datadir_sid || exit 1
-          steps/compute_cmvn_stats.sh datadir_sid || exit 1
-          sid/compute_vad_decision.sh --nj 1 datadir_sid || exit 1
-
-          # i-vectors for each speaker in our audio file
-          sid/extract_ivectors.sh  --nj 1 --num-threads !{params.nthreads} \
-              kaldi-data/sid/extractor_2048 datadir_sid .
-
-          # cross-product between trained speakers and diarized speakers
-          join -j 2 \
-              <(cut -d " " -f 1 kaldi-data/sid/name_ivector.scp | sort ) \
-              <(cut -d " " -f 1 spk_ivector.scp | sort ) > trials
-
-          ivector-plda-scoring --normalize-length=true \
-              "ivector-copy-plda --smoothing=0.3 kaldi-data/sid/lda_plda - |" \
-              "ark:ivector-subtract-global-mean scp:kaldi-data/sid//name_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-              "ark:ivector-subtract-global-mean kaldi-data/sid/mean.vec scp:spk_ivector.scp ark:- | transform-vec kaldi-data/sid/transform.mat ark:- ark:- | ivector-normalize-length ark:- ark:- |" \
-              trials lda_plda_scores
-          
-	        cat lda_plda_scores | sort -k2,2 -k3,3nr | awk \'{print $3, $1, $2}\' | uniq -f2 | awk \'{if ($1 > !{params.sid_similarity_threshold}) {print $3, $2}}\' | \
-	        perl -npe \'s/^\\S+-(S\\d+)/\\1/; s/_/ /g;\' | python -c \'import json, sys; spks={s.split()[0]:{"name" : " ".join(s.split()[1:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
+	        cat spk_preds.txt | grep -v "<unk>" | awk \'{if ($2 > !{params.spk_id_min_prosterior}) {print $0}}\' | \
+	        python -c \'import json, sys; spks={s.split()[0]:{"name" : " ".join(s.split()[2:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
           '''
         else
           '''
@@ -201,9 +175,13 @@ process prepare_data_for_whisper {
       
     shell:
       '''
+      . !{projectDir}/bin/prepare_process.sh
       mkdir datadir_25sec      
-      merge_consecutive_segments.py --max_duration 25 datadir datadir_25sec      
+      merge_consecutive_segments.py --max_duration 25 datadir datadir_25sec
       cp datadir/wav.scp datadir_25sec/wav.scp
+      utils/utt2spk_to_spk2utt.pl datadir_25sec/utt2spk > datadir_25sec/spk2utt
+      utils/fix_data_dir.sh datadir_25sec
+      
       '''
 }
 
@@ -226,6 +204,8 @@ process decode_whisper {
       '''
 }
 
+/*
+
 process align {
     memory '8GB'
     cpus 1
@@ -241,9 +221,66 @@ process align {
       
     shell:
       '''
-      cp -r datadir_25sec datadir_25sec_transcribed
+      mkdir -p datadir_25sec_transcribed      
+      cp -r datadir_25sec/{segments,wav.scp,utt2spk} datadir_25sec_transcribed
       cat !{trans_hyp}  > datadir_25sec_transcribed/text
       create_ctc_alignments.py !{params.rootdir}/models/hf/xls-r-300m-et datadir_25sec_transcribed alignments.json
+      '''
+}
+
+*/
+
+process align {
+    memory '4GB'
+    cpus 1
+    label 'with_gpu'
+    
+    input:
+      path datadir_25sec
+      file trans_hyp    
+      file audio    
+
+    output:
+      file 'alignments.json' into alignments_json
+      file 'alignments.ctm' into alignments_ctm
+
+    shell:
+      '''
+      . !{projectDir}/bin/prepare_process.sh
+
+      utils/copy_data_dir.sh !{datadir_25sec} datadir_25sec_hires
+      cat !{trans_hyp} | perl -npe 's/ [[:punct:]]/ /g;' >  datadir_25sec_hires/text      
+      steps/make_mfcc.sh --nj 1 \
+          --mfcc-config !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf/mfcc.conf \
+          datadir_25sec_hires || exit 1
+      steps/compute_cmvn_stats.sh datadir_25sec_hires || exit 1
+      utils/fix_data_dir.sh datadir_25sec_hires
+
+      steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
+        datadir_25sec_hires !{params.rootdir}/kaldi-data/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
+
+      mkdir dict
+      cp -r !{params.rootdir}/kaldi-data/dict .
+      rm -f dict/lexicon*.txt
+      echo "<unk>   UNK" > dict/lexicon.txt
+      echo "<sil>   SIL" >> dict/lexicon.txt
+
+      cat datadir_25sec_hires/text | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
+        perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g; s/(\\s)pppp\\b/\\1pp/g;  ' | uniq >> dict/lexicon.txt
+
+      utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
+      cp -r !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf .      
+
+      steps/nnet3/align.sh --retry-beam 100 --use-gpu true --nj 1 --online-ivector-dir ivectors \
+        --scale-opts '--transition-scale=1.0 --self-loop-scale=1.0 --acoustic-scale=1.0' \
+        datadir_25sec_hires lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali
+        
+      steps/get_train_ctm.sh --frame-shift 0.03 --use-segments false \
+        datadir_25sec_hires lang ali .
+
+      ctm2json.py ctm datadir_25sec_hires/segments !{trans_hyp} > alignments.json
+      utils/convert_ctm.pl datadir_25sec_hires/segments <(echo audio audio 1) ctm > alignments.ctm
+              
       '''
 }
 
@@ -315,13 +352,13 @@ process output {
 
     input:
       file punctuated_json
-      //file result_ctm
+      file alignments_ctm
 
     output:
       file "result.json" into result_json
       file "result.srt" into result_srt
       file "result.trs" into result_trs
-      //file "result.ctm" into result_ctm
+      file "result.ctm" into result_ctm
 
     script:
       json = punctuated_json
@@ -330,6 +367,7 @@ process output {
 
       json2trs.py --fid trs $punctuated_json > result.trs
       json2srt.py result.json > result.srt
+      cp -L $alignments_ctm result.ctm
       """
 }
 

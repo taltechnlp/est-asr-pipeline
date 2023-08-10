@@ -42,9 +42,10 @@ def merge_segments(segments, max_duration):
             if seg[1] - current_segment[0] <= max_duration:
                 spk = current_segment[3]
                 if seg[3] not in current_segment[3]:
-                    spk = current_segment[3] +  "+" + re.sub(".*###", "", seg[3])                    
+                    spk = current_segment[3] +  "+" + re.sub(".*---", "", seg[3])                    
+                    
                 text = current_segment[4] + " " + seg[4]
-                current_segment = (current_segment[0], seg[1], f"{spk}###{current_segment[0]:09.3f}-{seg[1]:09.3f}", spk, text)
+                current_segment = (current_segment[0], seg[1], f"{spk}---{current_segment[0]:09.3f}-{seg[1]:09.3f}", spk, text)
             else:
                 if rec_id not in merged:
                     merged[rec_id] = []
@@ -62,9 +63,10 @@ def write_segments(segments, segments_file, utt2spk_file, text_file):
     for rec_id in segments:
         segments[rec_id].sort()
         for segment in segments[rec_id]:
-            print(segment[2], segment[3], file=utt2spk_f)
-            print(segment[2], segment[4], file=text_f)
-            print(segment[2], rec_id, segment[0], segment[1], file=segments_f)
+            segment_id = f"{rec_id}---{segment[0]:09.3f}-{segment[1]:09.3f}"
+            print(segment_id, segment_id, file=utt2spk_f)
+            print(segment_id, segment[4], file=text_f)
+            print(segment_id, rec_id, segment[0], segment[1], file=segments_f)
 
     utt2spk_f.close()
     text_f.close()
