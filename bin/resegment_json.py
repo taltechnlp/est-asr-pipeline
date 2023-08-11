@@ -30,7 +30,8 @@ def get_turn(start, speaker_id, sections, speakers, new_turn_sil_length):
         current_section = section
         break
   if current_section is None:
-    raise Exception("No speech section for word starting at %.3f" % start)
+    print("Warning: No speech section for word starting at %.3f" % start, file=sys.stderr)
+    return None
   turns = section.setdefault("turns", [])
   if len(turns) == 0 or turns[-1]["speaker"] != speaker_id or turns[-1]["end"] + new_turn_sil_length < start:
     turns.append({"speaker" : speaker_id, "start" : start, "end" : start, "transcript" : "", "words" : []})
@@ -104,6 +105,8 @@ for word in words:
   if speaker_id != last_speaker_id:
     uppercase_next = True
   turn = get_turn(word["start"], speaker_id, sections, speakers, args.new_turn_sil_length)
+  if turn is None:
+    continue
   #print(turn)
   if uppercase_next:
     if word["word_with_punctuation"] == word["word_with_punctuation"].lower():

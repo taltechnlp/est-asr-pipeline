@@ -1,18 +1,21 @@
 #!/usr/bin/env nextflow
-
+nextflow.enable.dsl=2
 def env = System.getenv()
+params.in_file_list = ""
 params.in = "/home/aivo_olevi/tmp/ao_1.wav"
 params.out_dir = "results/"
 params.do_speaker_id = true
 params.do_punctuation = true
 params.do_language_id = true
-audio_file = file(params.in)
+//audio_file = file(params.in)
 
 out_dir = ""
 if (params.out_dir[-1] != "/") {
   out_dir = params.out_dir + "/"
 }
 else out_dir = params.out_dir
+
+
 
 
 process to_wav {
@@ -23,7 +26,8 @@ process to_wav {
     path audio_file
 
     output:
-    file 'audio.wav' glob false into audio
+    path 'audio.wav', glob:false, emit: audio
+    val "${audio_file.baseName}", emit: basename
     
     shell:
         """
@@ -36,11 +40,11 @@ process diarization {
     memory '5GB'
     
     input:
-    file audio
+    path audio
 
     output: 
-    file 'show.seg' into show_seg optional true
-    file 'show.uem.seg' into show_uem_seg 
+    path 'show.seg', emit: show_seg, optional: true
+    path 'show.uem.seg', emit: show_uem_seg 
 
     script:        
         """
@@ -55,11 +59,11 @@ process prepare_initial_data_dir {
     memory '1GB'
 
     input:
-      file show_seg
-      file audio
+      path show_seg
+      path audio
 
     output:
-      path 'init_datadir' into init_datadir optional true
+      path 'init_datadir', emit: init_datadir, optional: true
 
     shell:
     '''
@@ -92,10 +96,10 @@ process language_id {
     
     input:
       path init_datadir
-      file audio    
+      path audio    
     
     output:
-      path 'datadir' into datadir optional true
+      path 'datadir', emit:datadir, optional:true
     
     shell:
     if ( params.do_language_id )
@@ -142,10 +146,10 @@ process speaker_id {
    
     input:
       path datadir
-      file audio    
+      path audio    
 
     output:
-      file 'sid-result.json' into sid_result
+      path 'sid-result.json', emit:sid_result
 
     shell:
         if (params.do_speaker_id)
@@ -171,7 +175,7 @@ process prepare_data_for_whisper {
       path datadir
       
     output:
-      path 'datadir_25sec' into datadir_25sec optional true
+      path 'datadir_25sec', emit: datadir_25sec, optional:true
       
     shell:
       '''
@@ -193,10 +197,10 @@ process decode_whisper {
 
     input:
       path datadir_25sec
-      file audio    
+      path audio    
       
     output:
-      file 'trans.hyp' into trans_hyp
+      path 'trans.hyp', emit: trans_hyp
       
     shell:
       '''
@@ -237,12 +241,12 @@ process align {
     
     input:
       path datadir_25sec
-      file trans_hyp    
-      file audio    
+      path trans_hyp    
+      path audio    
 
     output:
-      file 'alignments.json' into alignments_json
-      file 'alignments.ctm' into alignments_ctm
+      path 'alignments.json', emit: alignments_json
+      path 'alignments.ctm', emit: alignments_ctm
 
     shell:
       '''
@@ -285,19 +289,17 @@ process align {
 }
 
 
-
-
 process to_json {    
     memory '500MB'
     
     input:
       path datadir
-      file show_uem_seg
-      file sid_result
-      file alignments_json
+      path show_uem_seg
+      path sid_result
+      path alignments_json
 
     output:
-      file "punctuated.json" into punctuated_json
+      path "punctuated.json", emit: punctuated_json
 
     shell:
       if (params.do_speaker_id)
@@ -312,53 +314,21 @@ process to_json {
 
 }
 
-/*
-
-process punctuation {
-    memory '4GB'
-    
-    input:
-      file unpunctuated_json
-
-    output:
-      file "punctuated.json" into punctuated_json
-
-    shell:
-      if (params.do_punctuation)
-        '''
-        WORK_DIR=$PWD
-        cd !{params.rootdir}/punctuator-data/est_punct2
-        TEMP_FILE1=$WORK_DIR/tmp1
-        TEMP_FILE2=$WORK_DIR/tmp2
-        cat $WORK_DIR/!{unpunctuated_json} > $TEMP_FILE1 
-        python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl $TEMP_FILE1 $TEMP_FILE2  
-        cat $TEMP_FILE2 > $WORK_DIR/punctuated.json
-        #rm TEMP_FILE1 TEMP_FILE2 
-        cd $WORK_DIR
-        '''
-      else
-        '''
-        cp !{unpunctuated_json} punctuated.json
-        '''
-}*/
-
-
-
-
 process output {
     memory '500MB'
     
-    publishDir "${out_dir}${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}${basename}", mode: 'copy', overwrite: true
 
     input:
-      file punctuated_json
-      file alignments_ctm
+      val basename
+      path punctuated_json
+      path alignments_ctm
 
     output:
-      file "result.json" into result_json
-      file "result.srt" into result_srt
-      file "result.trs" into result_trs
-      file "result.ctm" into result_ctm
+      path "result.json"
+      path "result.srt"
+      path "result.trs"
+      path "result.ctm"
 
     script:
       json = punctuated_json
@@ -373,7 +343,7 @@ process output {
 
 process empty_output {
 
-    publishDir "${out_dir}/${audio_file.baseName}", mode: 'copy', overwrite: true
+    publishDir "${out_dir}/${basename}", mode: 'copy', overwrite: true
 
     input:
       val a from datadir.ifEmpty{ 'EMPTY' }
@@ -398,3 +368,17 @@ process empty_output {
 }
 
 
+workflow {
+  files = params.in_file_list != "" ? Channel.fromPath(params.in_file_list).splitText() : Channel.fromPath(params.in)
+  
+  to_wav(files)
+  diarization(to_wav.out.audio)
+  prepare_initial_data_dir(diarization.out.show_seg, to_wav.out.audio)
+  language_id(prepare_initial_data_dir.out.init_datadir, to_wav.out.audio)
+  speaker_id(language_id.out.datadir, to_wav.out.audio)
+  prepare_data_for_whisper(language_id.out.datadir)
+  decode_whisper(prepare_data_for_whisper.out.datadir_25sec, to_wav.out.audio)
+  align(prepare_data_for_whisper.out.datadir_25sec, decode_whisper.out.trans_hyp, to_wav.out.audio)
+  to_json(language_id.out.datadir, diarization.out.show_uem_seg, speaker_id.out.sid_result, align.out.alignments_json)
+  output(to_wav.out.basename, to_json.out.punctuated_json, align.out.alignments_ctm)
+}
