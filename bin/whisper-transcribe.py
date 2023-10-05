@@ -5,7 +5,8 @@ import logging
 import sys
 import numpy as np
 import zlib
-
+#import gc
+import torch
 from faster_whisper import WhisperModel
 from faster_whisper.tokenizer import Tokenizer
 from faster_whisper.audio import decode_audio
@@ -28,7 +29,7 @@ if __name__ == "__main__":
   args = parser.parse_args()
   logging.info(f"Loading Whisper model from {args.model_path}")
   
-  model = WhisperModel(args.model_path, device="cuda", compute_type="float32")
+  model = WhisperModel(args.model_path, device="cuda", compute_type="float32", cpu_threads=1, device_index=0)
   
   sampling_rate = model.feature_extractor.sampling_rate
   logging.info(f"Loading audio from {args.audio_file}")
@@ -71,4 +72,6 @@ if __name__ == "__main__":
         
     previous_tokens.extend(tokens)      
     print(segment_info[0], text)
-    
+
+  # avoids a hang at exit
+  encoder_output = None
