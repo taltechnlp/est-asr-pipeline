@@ -19,7 +19,8 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 
 Pull the required Docker image, containing models and libraries (recommended):
 
-    docker pull eu.gcr.io/speech2text-218910/est-asr-pipeline:0.2c
+
+    docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.0a
 
 Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-container-runtime)
 
@@ -64,7 +65,7 @@ The transcription result in different formats is put to the directory `results/s
 (where `some_audiofile` corresponds to the "basename" of your input file):
 
     $ ls results/some_audiofile/
-    result.ctm  result.json  result.srt  result.trs  result.with-compounds.ctm
+    result.ctm  result.json  result.srt  result.trs  result.with-compounds.ctm   result.txt
 
 ### Running on cluster
 
