@@ -155,7 +155,7 @@ process speaker_id {
         if (params.do_speaker_id)
           '''
           spk_id.sh --device 1 --accelerator gpu --load-checkpoint !{params.rootdir}/models/spk_id/version_295816/checkpoints/last.ckpt \
-            --predict-datadir datadir --predictions-file spk_preds.txt --segments-per-spk 10
+            --predict-datadir datadir --predictions-file spk_preds.txt --segments-per-spk 7
           
 	        cat spk_preds.txt | grep -v "<unk>" | awk \'{if ($2 > !{params.spk_id_min_prosterior}) {print $0}}\' | \
 	        python -c \'import json, sys; spks={s.split()[0]:{"name" : " ".join(s.split()[2:])} for s in sys.stdin}; json.dump(spks, sys.stdout);\' > sid-result.json
@@ -196,17 +196,48 @@ process decode_whisper {
     label 'with_gpu'
 
     input:
-      path datadir_25sec
       path audio    
       
     output:
-      path 'trans.hyp', emit: trans_hyp
+      path 'audio.tsv', emit: audio_tsv
       
     shell:
       '''
-      whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
+      #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
+      #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-medium-et-v4-ct2 !{audio} datadir_25sec/segments | cut -f 2- -d " " | perl -npe \'s/(\\S)([,.!?:])/\\1 \\2/g\' | paste <(cut -f 1 -d " " datadir_25sec/segments) - | tee trans.hyp
+      
+      #whisper-ctranslate2 --language et --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 !{audio} --beam_size 2
+      whisper-ctranslate2 --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-v2-ct2 !{audio} --beam_size  1 --vad_filter True
+      
       '''
 }
+
+
+process postprocess_whisper {
+    memory '2GB'
+    cpus 1
+
+    input:
+      path audio_tsv
+      
+    output:
+      path 'datadir_whisper', emit: datadir_whisper, optional:true
+      
+    shell:
+      '''
+      . !{projectDir}/bin/prepare_process.sh
+      mkdir datadir_whisper     
+      echo audio audio A > datadir_whisper/reco2file_and_channel
+      echo "audio audio.wav" > datadir_whisper/wav.scp      
+      tail -n +2 !{audio_tsv} | awk '{printf("%04d", NR); print(" audio " $1/1000 " " $2/1000);}' > datadir_whisper/segments
+      tail -n +2 !{audio_tsv} | awk '{printf("%04d", NR); $1=""; $2=""; print }' > datadir_whisper/text
+      awk '{print($1, $1)}' datadir_whisper/segments > datadir_whisper/utt2spk
+      awk '{print($1, $1)}' datadir_whisper/segments > datadir_whisper/spk2utt
+      
+      '''
+}
+
+
 
 /*
 
@@ -240,8 +271,7 @@ process align {
     label 'with_gpu'
     
     input:
-      path datadir_25sec
-      path trans_hyp    
+      path datadir_whisper
       path audio    
 
     output:
@@ -252,16 +282,16 @@ process align {
       '''
       . !{projectDir}/bin/prepare_process.sh
 
-      utils/copy_data_dir.sh !{datadir_25sec} datadir_25sec_hires
-      cat !{trans_hyp} | perl -npe 's/ [[:punct:]]/ /g;' >  datadir_25sec_hires/text      
+      utils/copy_data_dir.sh !{datadir_whisper} datadir_whisper_hires
+      #cat !{datadir_whisper}/text | perl -npe 's/ [[:punct:]]/ /g;' >  datadir_whisper_hires/text      
       steps/make_mfcc.sh --nj 1 \
           --mfcc-config !{params.rootdir}/kaldi-data/!{params.acoustic_model}/conf/mfcc.conf \
-          datadir_25sec_hires || exit 1
-      steps/compute_cmvn_stats.sh datadir_25sec_hires || exit 1
-      utils/fix_data_dir.sh datadir_25sec_hires
+          datadir_whisper_hires || exit 1
+      steps/compute_cmvn_stats.sh datadir_whisper_hires || exit 1
+      utils/fix_data_dir.sh datadir_whisper_hires
 
       steps/online/nnet2/extract_ivectors_online.sh  --nj 1 \
-        datadir_25sec_hires !{params.rootdir}/kaldi-data/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
+        datadir_whisper_hires !{params.rootdir}/kaldi-data/!{params.acoustic_model}/ivector_extractor ivectors || exit 1;
 
       mkdir dict
       cp -r !{params.rootdir}/kaldi-data/dict .
@@ -269,7 +299,7 @@ process align {
       echo "<unk>   UNK" > dict/lexicon.txt
       echo "<sil>   SIL" >> dict/lexicon.txt
 
-      cat datadir_25sec_hires/text | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
+      cat datadir_whisper_hires/text | perl -npe 's/\\S+\\s//; s/\\s+/\\n/g;' | grep -v "^\\s*$" | sort | uniq | ${ET_G2P_ROOT}/run.sh |  perl -npe 's/\\(\\d\\)(\\s)/\\1/' | \
         perl -npe 's/\\b(\\w+) \\1\\b/\\1\\1 /g; s/(\\s)jj\\b/\\1j/g; s/(\\s)tttt\\b/\\1tt/g; s/(\\s)pppp\\b/\\1pp/g;  ' | uniq >> dict/lexicon.txt
 
       utils/prepare_lang.sh --phone-symbol-table !{params.rootdir}/kaldi-data/!{params.acoustic_model}/phones.txt --sil-prob 0.01 dict '<unk>' dict/tmp lang
@@ -277,42 +307,17 @@ process align {
 
       steps/nnet3/align.sh --retry-beam 100 --use-gpu true --nj 1 --online-ivector-dir ivectors \
         --scale-opts '--transition-scale=1.0 --self-loop-scale=1.0 --acoustic-scale=1.0' \
-        datadir_25sec_hires lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali
+        datadir_whisper_hires lang !{params.rootdir}/kaldi-data/!{params.acoustic_model} ali
         
       steps/get_train_ctm.sh --frame-shift 0.03 --use-segments false \
-        datadir_25sec_hires lang ali .
+        datadir_whisper_hires lang ali .
 
-      ctm2json.py ctm datadir_25sec_hires/segments !{trans_hyp} > alignments.json
-      utils/convert_ctm.pl datadir_25sec_hires/segments <(echo audio audio 1) ctm > alignments.ctm
+      ctm2json.py ctm datadir_whisper_hires/segments !{datadir_whisper}/text > alignments.json
+      utils/convert_ctm.pl datadir_whisper_hires/segments <(echo audio audio 1) ctm > alignments.ctm
               
       '''
 }
 
-
-process to_json {    
-    memory '500MB'
-    
-    input:
-      path datadir
-      path show_uem_seg
-      path sid_result
-      path alignments_json
-
-    output:
-      path "punctuated.json", emit: punctuated_json
-
-    shell:
-      if (params.do_speaker_id)
-          """
-          # foo
-          python3 !{projectDir}/bin/resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{datadir} !{alignments_json} > punctuated.json
-          """
-      else 
-          """
-          python3 !{projectDir}/bin/resegment_json.py --new-turn-sil-length 1.0 --pms-seg !{show_uem_seg} !{datadir} !{alignments_json} > punctuated.json
-          """
-
-}
 
 process output {
     memory '500MB'
@@ -321,7 +326,10 @@ process output {
 
     input:
       val basename
-      path punctuated_json
+      path datadir
+      path show_uem_seg
+      path sid_result
+      path alignments_json
       path alignments_ctm
 
     output:
@@ -329,16 +337,20 @@ process output {
       path "result.srt"
       path "result.trs"
       path "result.ctm"
+      path "result.txt"
 
-    script:
-      json = punctuated_json
-      """
-      normalize_json.py words2numbers.py $punctuated_json > result.json
+    shell:
+      '''
+      resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --pms-seg !{show_uem_seg} !{datadir} !{alignments_json} > punctuated.json
+      
+      normalize_json.py words2numbers.py punctuated.json > result.json
 
-      json2trs.py --fid trs $punctuated_json > result.trs
+      json2trs.py --fid trs punctuated.json > result.trs
       json2srt.py result.json > result.srt
-      cp -L $alignments_ctm result.ctm
-      """
+      cat !{alignments_ctm} | perl -npe 's/[.,!?;:]$//' >  result.ctm
+      json2text.py < result.json > result.txt
+
+      '''
 }
 
 process empty_output {
@@ -356,6 +368,7 @@ process empty_output {
       file "result.srt" into empty_result_srt
       file "result.trs" into empty_result_trs
       file "result.ctm" into empty_result_ctm
+      file "result.txt" into empty_result_txt
 
     script:
       json = file("assets/empty.json")
@@ -363,7 +376,7 @@ process empty_output {
       """
       cp $json result.json
       json2trs.py $json > result.trs      
-      touch result.srt result.ctm 
+      touch result.srt result.ctm result.txt
       """
 }
 
@@ -376,9 +389,8 @@ workflow {
   prepare_initial_data_dir(diarization.out.show_seg, to_wav.out.audio)
   language_id(prepare_initial_data_dir.out.init_datadir, to_wav.out.audio)
   speaker_id(language_id.out.datadir, to_wav.out.audio)
-  prepare_data_for_whisper(language_id.out.datadir)
-  decode_whisper(prepare_data_for_whisper.out.datadir_25sec, to_wav.out.audio)
-  align(prepare_data_for_whisper.out.datadir_25sec, decode_whisper.out.trans_hyp, to_wav.out.audio)
-  to_json(language_id.out.datadir, diarization.out.show_uem_seg, speaker_id.out.sid_result, align.out.alignments_json)
-  output(to_wav.out.basename, to_json.out.punctuated_json, align.out.alignments_ctm)
+  decode_whisper(to_wav.out.audio)
+  postprocess_whisper(decode_whisper.out.audio_tsv)
+  align(postprocess_whisper.out.datadir_whisper, to_wav.out.audio)
+  output(to_wav.out.basename, language_id.out.datadir, diarization.out.show_uem_seg, speaker_id.out.sid_result, align.out.alignments_json, align.out.alignments_ctm)
 }

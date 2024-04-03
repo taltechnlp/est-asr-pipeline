@@ -16,7 +16,7 @@ from pytorch_lightning.callbacks import EarlyStopping
 from pytorch_lightning.callbacks import ModelCheckpoint, StochasticWeightAveraging, Callback
 
 import torchmetrics
-import speechbrain
+from speechbrain.inference.speaker import EncoderClassifier
 
 import logging
 
@@ -49,7 +49,7 @@ class SegmentClassificationModel(LightningModule):
     # ---------------------
     def __build_model(self):
 
-        self.pretrained = speechbrain.pretrained.EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
+        self.pretrained = EncoderClassifier.from_hparams(source="speechbrain/spkrec-ecapa-voxceleb")
         
         # FIXME: derive from model
         self.embed_dim = 192

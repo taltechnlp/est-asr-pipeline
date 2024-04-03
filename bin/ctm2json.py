@@ -4,7 +4,7 @@ import argparse
 import string
 import sys
 import pandas.io.json as json
-
+import re
 
 parser = argparse.ArgumentParser("Converts CTM file with the corresponding punctuated transcripts file to flat alignemnts JSON")
 parser.add_argument('ctm')
@@ -16,8 +16,13 @@ args = parser.parse_args()
 text = {}
 with open(args.text_file, 'r') as f:
   for line in f:
-    r = line.strip().split()
-    text[r[0]] = r[1:]
+    seg_id, trans  = line.strip().split(maxsplit=1)
+    #trans = re.sub(r' ([?!.,\\"-]+)(\S)', r" \1 \2", trans)
+    #trans = re.sub(r'^([?!.,\\"-]+)(\S)', r"\1 \2", trans)
+    #trans = re.sub(r'^([?!.,\\"-]+) ', r"", trans)
+    #trans = re.sub(r'([?!.,\\"-]+) [?!.,\\"-]', r"\1", trans)
+
+    text[seg_id] = trans.split()
 
 segments = {}      
 with open(args.segments_file, 'r') as f:
@@ -41,21 +46,27 @@ for seg_id, (segment_start, segment_end) in sorted(segments.items(), key=lambda 
       segment_trans = text[seg_id] 
       #breakpoint()
       for word_info in segment_ctm_words[seg_id]:
-        assert word_info[0] == segment_trans[i]
-      
-        new_word_info = {"word": word_info[0], "start": word_info[1] + segment_start, "end": word_info[2] + segment_start}
+        print(word_info[0], segment_trans[i], file=sys.stderr)
+        assert word_info[0] == segment_trans[i] or word_info[0] == "<unk>"
+        #new_word_info = {"word": segment_trans[i], "start": word_info[1] + segment_start, "end": word_info[2] + segment_start}
         
-        if len(segment_trans) > i + 1 and segment_trans[i+1] in list(string.punctuation):
-          new_word_info["punctuation"] = segment_trans[i+1]
-          i += 1
-        else:
-          new_word_info["punctuation"] = ""
-        new_word_info["word_with_punctuation"] = new_word_info["word"] + new_word_info["punctuation"]
+        #if len(segment_trans) > i + 1 and all([c in list(string.punctuation) for c in segment_trans[i+1]]):
+        #  new_word_info["punctuation"] = segment_trans[i+1]
+        #  i += 1
+        #else:
+        #  new_word_info["punctuation"] = ""
+        #new_word_info["word_with_punctuation"] = new_word_info["word"] + new_word_info["punctuation"]
+        new_word_info = {"word_with_punctuation": segment_trans[i], "start": word_info[1] + segment_start, "end": word_info[2] + segment_start}
+        
+        
+        new_word_info["word"] = re.sub(r'[,.!?:;]+$', '', new_word_info["word_with_punctuation"])
+        
+        new_word_info["punctuation"] = new_word_info["word_with_punctuation"][-1] if new_word_info["word_with_punctuation"][-1] in list(",!.?:;") else ""
         
         words.append(new_word_info)
         i += 1   
     else:
       print(f"Warning: no alignment information for segment {seg_id} -- skipping it", file=sys.stderr)
     
-print(json.dumps(words, indent=2, double_precision=3))
+print(json.ujson_dumps(words, indent=2, double_precision=3))
     
