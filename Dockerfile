@@ -1,4 +1,4 @@
-FROM kaldiasr/kaldi:gpu-latest 
+FROM nvcr.io/nvidia/kaldi:22.12-py3
 MAINTAINER Tanel Alumae <alumae@gmail.com>
 
 RUN apt-get update && apt-get install -y  \
