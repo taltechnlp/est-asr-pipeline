@@ -203,11 +203,14 @@ process decode_whisper {
       
     shell:
       '''
+      #python -c "import torch; print(torch.cuda.is_available()); print(torch.backends.cudnn.version())"
+      export LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`:$LD_LIBRARY_PATH
+      
       #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
       #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-medium-et-v4-ct2 !{audio} datadir_25sec/segments | cut -f 2- -d " " | perl -npe \'s/(\\S)([,.!?:])/\\1 \\2/g\' | paste <(cut -f 1 -d " " datadir_25sec/segments) - | tee trans.hyp
       
       #whisper-ctranslate2 --language et --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 !{audio} --beam_size 2
-      whisper-ctranslate2 --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-v2-ct2 !{audio} --beam_size  1 --vad_filter True
+      whisper-ctranslate2 --device cuda --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-v2-ct2 !{audio} --beam_size  1 --vad_filter True
       
       '''
 }

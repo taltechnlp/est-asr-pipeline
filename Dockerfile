@@ -44,7 +44,10 @@ RUN conda install ruamel.yaml && \
     pip install pytest && \
     pip install soundfile pandas
 
-RUN pip install speechbrain pytorch-lightning==1.9.0 whisper-ctranslate2
+RUN pip install speechbrain pytorch-lightning==1.9.0 
+
+
+RUN pip install whisper-ctranslate2 faster-whisper 'ctranslate2<4.0'
 
 WORKDIR /opt
   
