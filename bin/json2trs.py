@@ -1,65 +1,104 @@
-#! /usr/bin/env python3
-import random
+#!/usr/bin/env python
+
 import json
-import sys
-import datetime
-import os.path
 import argparse
+import sys
+from lxml import etree
 
-def print_header(filename):
-  now = datetime.datetime.now()
-  print('<?xml version="1.0" encoding="UTF-8"?>')
-  print('<!DOCTYPE Trans SYSTEM "trans-14.dtd">')
-  print('<Trans scribe="est-speech2txt" audio_filename="'+ filename+ '" version="1" version_date="' + now.strftime("%y%m%d") + '">')
+def create_transcriber_trs(json_data, file_id):
+    # Create the root Trans element and add the audio filename attribute
+    root = etree.Element('Trans')
+    if file_id:
+        root.set('audio_filename', file_id)
     
+    # Speakers section (separate from Episode)
+    speakers_elem = etree.SubElement(root, 'Speakers')
     
-def print_footer():
-  print('</Episode>')
-  print('</Trans>')
+    speakers = json_data['speakers']
     
+    # Create a mapping from original speaker IDs to "spk%d" format
+    speaker_map = {}
+    for i, speaker_id in enumerate(speakers.keys(), 1):
+        speaker_map[speaker_id] = f"spk{i}"
     
-def print_speakers(speakers):
-  print("<Speakers>")
-  i = 1
-  for speaker_id, speaker in speakers.items():
-    default_speaker_name = "K%02d" % i    
-    print('<Speaker id="%s" name="%s" check="no" dialect="native" accent="" scope="local"/>' % (speaker["transcriber_id"], speaker.get("name", default_speaker_name)))
-    i += 1
-  print("</Speakers>")
-  print('<Episode>')
+    # Create speakers in the <Speakers> section
+    for speaker_id, speaker_info in speakers.items():
+        speaker_elem = etree.SubElement(speakers_elem, 'Speaker')
+        speaker_elem.set('id', speaker_map[speaker_id])
+        speaker_elem.set('name', speaker_info.get('name', 'Unknown'))
+    
+    # Create the Episode section (without Version)
+    episode = etree.SubElement(root, 'Episode')
+    
+    # Create sections and turns
+    for section in json_data['sections']:
+        section_elem = etree.SubElement(episode, 'Section')
+        section_elem.set('type', "report")
+        section_elem.set('startTime', str(section['start']))
+        section_elem.set('endTime', str(section['end']))
+
+        current_turn_elem = None
         
+        for i, turn in enumerate(section.get('turns', [])):                
+            start = turn['start']
+            end = turn['end']
+            if i == 0:
+              section_elem.set('startTime', str(start))
+            speaker = speaker_map[turn['speaker']]  # Use the mapped speaker ID
+            unnormalized_transcript = turn.get('unnormalized_transcript', '')
+            
+            # Check if the current turn can be merged with the previous one
+            #breakpoint()
+            if current_turn_elem is not None and abs(float(current_turn_elem.get('endTime')) - start) < 0.0001 and current_turn_elem.get('speaker') == speaker:
+                # Insert a Sync tag and continue the same turn
+                sync = etree.SubElement(current_turn_elem, 'Sync')
+                sync.set('time', str(start))
+                sync.tail = unnormalized_transcript
+                # Update the endTime of the current turn
+                current_turn_elem.set('endTime', str(end))
+            else:
+                # Create a new turn
+                current_turn_elem = etree.SubElement(section_elem, 'Turn')
+                current_turn_elem.set('startTime', str(start))
+                current_turn_elem.set('endTime', str(end))
+                current_turn_elem.set('speaker', speaker)
+                
+                # Add the transcript to the current turn
+                current_turn_elem.text = unnormalized_transcript
+        
+        
+        if current_turn_elem is not None:
+            section_elem.set('endTime', current_turn_elem.get("endTime"))
+    # Return the formatted XML with DOCTYPE
+    return root
 
-def print_sections(sections, speakers):
-  for section in sections:
-    section_type = section["type"]     
-    
-    if section_type == "speech":
-      print('<Section type="%s" startTime="%0.3f" endTime="%0.3f">' % ("report", section["start"], section["end"]))
-      for turn in section.get("turns", []):
-        print('<Turn speaker="%s" startTime="%0.3f" endTime="%0.3f">' % (speakers[turn["speaker"]]["transcriber_id"], turn["start"], turn["end"]))
-        print('<Sync time="%0.3f"/>' % turn["start"])
-        # TRS files should use unnormalized transcripts where words are not converted to numbers
-        print(turn.get("unnormalized_transcript", turn["transcript"]))
-        print('</Turn>')
-      print('</Section>')
-    elif section_type == "non-speech":
-      print('<Section type="%s" startTime="%0.3f" endTime="%0.3f">' % ("filler", section["start"], section["end"]))
-      print('</Section>')
+def main():
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description="Convert JSON transcription to TRS XML format")
+    parser.add_argument("input_json", help="Path to the input JSON file containing transcription data")
+    parser.add_argument("--fid", type=str, default="", help="File ID to use as the audio_filename attribute in the TRS file")
 
-parser = argparse.ArgumentParser("Converts JSON format to Transcriber trs")
-parser.add_argument('--fid', default="unknown", help="File id to be used in trs header")
-parser.add_argument('json')
+    args = parser.parse_args()
 
-args = parser.parse_args()
+    # Load the JSON file
+    with open(args.input_json, 'r', encoding='utf-8') as f:
+        json_data = json.load(f)
 
-trans = json.load(open(args.json))
+    # Create the TRS XML using the provided file ID
+    trs_xml_tree = create_transcriber_trs(json_data, args.fid)
 
-# Add speciial transcriber_id fields (Transcriber needs IDs to obey this format, it seems)
-for (i, speaker) in enumerate(trans["speakers"].values()):
-  speaker["transcriber_id"] = "spk%d" % (i + 1)
+    # Create the DOCTYPE element and serialize XML with DOCTYPE
+    doctype = '<!DOCTYPE Trans SYSTEM "trans-14.dtd">'
+    trs_xml_with_doctype = etree.tostring(
+        trs_xml_tree, 
+        pretty_print=True, 
+        xml_declaration=True, 
+        encoding="UTF-8", 
+        doctype=doctype
+    ).decode('utf-8')
 
-print_header(args.fid)
-print_speakers(trans["speakers"])
-print_sections(trans["sections"], trans["speakers"])
-print_footer()
+    # Print the output to stdout
+    sys.stdout.write(trs_xml_with_doctype)
 
+if __name__ == "__main__":
+    main()

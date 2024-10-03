@@ -8,6 +8,7 @@ import re
 import numpy as np
 from collections import OrderedDict
 from decimal import Decimal
+import itertools
 
 def get_speaker_for_time(time, segments):
   distances = []
@@ -40,9 +41,10 @@ def get_turn(start, speaker_id, sections, speakers, new_turn_sil_length):
 
 parser = argparse.ArgumentParser("Converts flat unsegmented word alignments to dedicated JSON format")
 parser.add_argument('--new-turn-sil-length', default="2.0", type=float, help="Length of silence in seconds, from which a new turn is created")
-parser.add_argument('--speech-padding', default="0.25", type=float, help="Speech segments are padded by this amount")
+parser.add_argument('--speech-padding', default="0.5", type=float, help="Speech segments are padded by this amount")
 parser.add_argument('--speaker-names', help="File in JSON format that maps speaker IDs to speaker info (usually just name name)")
 parser.add_argument('--pms-seg', help="The pms (speech/non-speech segmentation) file from diarization")
+parser.add_argument('--rttm', help="The rttm file from diarization")
 parser.add_argument('datadir')
 parser.add_argument('alignments_json')
 
@@ -88,10 +90,59 @@ if args.pms_seg:
     
     if start < end:
       sections.append({"type" : kind, "start" : start, "end" : end})
+elif args.rttm:
+  for l in open(args.rttm):
+    ss = l.split()
+    start = float(ss[3])
+    end = start + float(ss[4])
+    if ss[0] == 'SPEAKER':
+      kind = 'speech'
+      if (start > 0.0):
+        start -=  args.speech_padding
+      end +=  args.speech_padding
+    else:
+      kind = 'non-speech'
+      if (start > 0.0):
+        start +=  args.speech_padding
+      end -=  args.speech_padding
+    
+    if start < end:
+      sections.append({"type" : kind, "start" : start, "end" : end})
 else:
   sections.append({"type" : "speech", "start" : 0.0, "end" : 99999.})
   
-sections = sorted(sections, key=lambda s: s["start"])
+
+# Step-by-step merging process
+# Flatten and sort the list of dictionaries by 'type' and 'start' time
+flattened_sorted = sorted(
+    [{'type': d['type'], 'start': d['start'], 'end': d['end']} for d in sections],
+    key=lambda x: (x['type'], x['start'])
+)
+
+# Group by 'type'
+grouped_by_type = itertools.groupby(flattened_sorted, key=lambda x: x['type'])
+
+# Merge overlapping segments within each group
+merged = []
+for type_key, group in grouped_by_type:
+    group = list(group)  # Convert group to a list
+    merged_segment = group[0]  # Initialize the first segment
+
+    for segment in group[1:]:
+        if segment['start'] <= merged_segment['end']:
+            # Merge segments if they overlap or touch
+            merged_segment['end'] = max(merged_segment['end'], segment['end'])
+        else:
+            # Add the current merged segment and start a new one
+            merged.append(merged_segment)
+            merged_segment = segment
+
+    merged.append(merged_segment)  # Add the last segment
+
+
+sections = merged
+
+print(sections, file=sys.stderr)
  
 speakers = {}
 
