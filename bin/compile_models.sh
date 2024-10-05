@@ -101,7 +101,6 @@ if [ $stage -le 7 ]; then
     cp $rnnlm_dir/config/unigram_probs.txt $rnnlm_dir/unigram_probs.txt
     rnnlm/change_vocab.sh build/fst/data/prunedlm/words.txt \
         $rnnlm_dir build/fst/data/rnnlm_unk
-  
 fi    
     
 
@@ -114,5 +113,7 @@ if [ $stage -le 8 ]; then
         grep -v '<s> <s>' | \
         grep -v '</s> <s>' | \
         grep -v '</s> </s>' | \
-        arpa2fst --disambig-symbol='#0' --read-symbol-table=build/fst/data/compounderlm/words.txt -  | fstproject --project_output=true | fstarcsort --sort_type=ilabel > build/fst/data/compounderlm/G.fst 
+        arpa2fst --disambig-symbol='#0' --read-symbol-table=build/fst/data/compounderlm/words.txt - > arpa2fst_result.fst
+    cat arpa2fst_result.fst  | fstproject --project_type=output | fstarcsort --sort_type=ilabel > build/fst/data/compounderlm/G.fst 
+    rm arpa2fst_result.fst
 fi

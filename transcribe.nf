@@ -362,7 +362,8 @@ process punctuation {
         TEMP_FILE1=$(mktemp); 
         TEMP_FILE2=$(mktemp);
         cat $WORK_DIR/!{unpunctuated_json} > TEMP_FILE1 
-        python2 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
+        export ADDR2LINE=$(which addr2line)
+        conda run -n aesara-env python3 punctuator_pad_emb_json.py Model_stage2p_final_563750_h256_lr0.02.pcl TEMP_FILE1 TEMP_FILE2  
         cat TEMP_FILE2 > $WORK_DIR/punctuated.json
         rm TEMP_FILE1 TEMP_FILE2 
         cd $WORK_DIR
@@ -376,7 +377,7 @@ process punctuation {
 
 
 
-process output {
+process punctuation_output {
     memory '500MB'
     
     publishDir "${out_dir}", mode: 'copy', overwrite: true
@@ -446,7 +447,7 @@ workflow {
     lattice2ctm( rnnlm_rescoring.out, mfcc.out.datadir_hires )
     to_json( lattice2ctm.out.segmented_ctm, lattice2ctm.out.with_compounds_ctm, speaker_id.out, diarization.out.show_uem_seg) \
       | punctuation
-    output( lattice2ctm.out.with_compounds_ctm, punctuation.out )
+    punctuation_output( lattice2ctm.out.with_compounds_ctm, punctuation.out )
     empty_output( language_id.out.ifEmpty{ 'EMPTY' }, prepare_initial_data_dir.out.ifEmpty{ 'EMPTY' })
 }
 
