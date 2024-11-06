@@ -42,12 +42,15 @@ RUN conda install ruamel.yaml && \
     pip install kaldiio && \
     pip install simplejson && \
     pip install pytest && \
-    pip install soundfile pandas
+    pip install soundfile pandas && \
+    pip install lxml
 
 RUN pip install speechbrain pytorch-lightning==1.9.0 
 
 
 RUN pip install whisper-ctranslate2 faster-whisper 'ctranslate2<4.0'
+
+RUN pip install pyannote.audio==3.1
 
 WORKDIR /opt
   
@@ -63,29 +66,22 @@ ENV LANG en_US.UTF-8
     
 RUN apt-get install -y openjdk-8-jdk-headless ant
 
-#RUN cd /opt/kaldi/tools && \
-#    extras/install_pocolm.sh
 
 ENV HOME /opt
 ENV LD_LIBRARY_PATH /usr/local/lib
 
-#RUN ln -s -f /usr/bin/python2 /usr/bin/python && \
-#    apt-get install -y python3-simplejson python3-pytest
     
 
 
 RUN mkdir -p /opt/est-asr-pipeline && \
     cd /opt/est-asr-pipeline && \
-    wget -q -O - https://cs.taltech.ee/staff/tanel.alumae/data/est-asr-pipeline-whisper-models.tgz | tar xvz
+    wget -q -O - https://cs.taltech.ee/staff/tanel.alumae/data/est-asr-pipeline-whisper-models.2024-10-11.tgz | tar xvz
    
 
 COPY bin /opt/est-asr-pipeline/bin
+COPY assets /opt/est-asr-pipeline/assets
 
 ENV KALDI_ROOT /opt/kaldi
-
-#RUN cd /opt/est-asr-pipeline && \
-#    touch -m path.sh && \
-#    ./bin/compile_models.sh
 
 
 
@@ -93,10 +89,11 @@ ENV KALDI_ROOT /opt/kaldi
 RUN cd /opt/est-asr-pipeline/bin && \
     ./extract_lid_features_kaldi.py foo fii  || echo "OK";
 
-# cache model for speech activity detection
-RUN cd /opt/est-asr-pipeline/bin && \
-    ./find_speech_segments.py foo fii  || echo "OK";
+ARG HF_TOKEN
 
+# cache model for speaker diarization
+RUN cd /opt/est-asr-pipeline && \
+    ./bin/diarize.py foo.wav foo.rttm || echo "Should download model and error out, it's OK"
 
 RUN apt-get install -y procps
 

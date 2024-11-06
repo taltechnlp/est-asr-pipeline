@@ -399,14 +399,13 @@ process empty_output {
       path "result.txt", emit: empty_result_txt
       
 
-    script:
-      json = file("assets/empty.json")
-      with_compounds_ctm = file("assets/empty.ctm")
-      """
+    shell:      
+      '''
+      json=!{params.rootdir}/assets/empty.json
       cp $json result.json
       json2trs.py $json > result.trs      
       touch result.srt result.ctm result.txt
-      """
+      '''
 }
 
 
