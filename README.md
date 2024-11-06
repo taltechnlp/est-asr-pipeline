@@ -20,7 +20,7 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 Pull the required Docker image, containing models and libraries (recommended):
 
 
-    docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.0b
+    docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline
 
 Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-container-runtime)
 
