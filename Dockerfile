@@ -95,6 +95,11 @@ ARG HF_TOKEN
 RUN cd /opt/est-asr-pipeline && \
     ./bin/diarize.py foo.wav foo.rttm || echo "Should download model and error out, it's OK"
 
+# cache SpkID feature model
+RUN pip install huggingface_hub && \
+    huggingface-cli download speechbrain/spkrec-ecapa-voxceleb
+    
+
 RUN apt-get install -y procps
 
 RUN git clone https://github.com/alumae/et-g2p.git && \
