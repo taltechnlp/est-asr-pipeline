@@ -103,7 +103,6 @@ Firstly, the main script (transcribe.nf) already has default values for input pa
 -   `--do_punctuation true|false` - Whether to attempt punctuation recovery and add punctuation to the transcribed text. By default `true`.
 -   `--do_language_id true|false` - Whether to apply a language ID model to discard speech segements that are not in Estonian. By default `true`.
 
-
 ### Command line options
 
 Nextflow allows additional command line options:
