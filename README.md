@@ -4,14 +4,14 @@ This project uses the Nextflow workflow engine to transcribe Estonian speech rec
 
 Nextflow offers great support for container technologies like Docker and different cluster and cloud environments as well as Kubernetes.
 
-*This pipeline requires a server with a fairly modern NViudia GPU!*
+*This pipeline requires a server with a fairly modern NVidia GPU and a CUDA installation! CUDA can only be installed on certain Linux distributions. On Windows, WSL and Docker can be used.*
 
 ## Installation
 
 The project uses Nextflow which depends mainly on Java. Both should be installed locally.
 The pre-built models, scripts and Kaldi tookit is consumed via Docker and so Docker also needs to be installed.
 
-This configuration has only been used on Linux. Because of Docker use other OS-s could be possible but because of configuration tricks used in the nextflow.config files, Dockerizing this project might be easiest.
+This configuration has only been used on Linux. Because of Docker use other OS-s could be possible but because of configuration tricks used in the nextflow.config files, Dockerizing this project might be easiest. On Windows, using Linux through WSL is the best choice. 
 
 Install Nextflow locally (depends on Java 8, refer to official documentation in case of troubles):
 
@@ -73,14 +73,17 @@ The transcription result in different formats is put to the directory `results/s
 
 Run:
 
-    nextflow run transcribe.nf -profile docker,sge --in /path/to/some_audiofile.mp3 
+    NXF_VER=23.10.3 nextflow run transcribe.nf -profile docker,sge --in /path/to/some_audiofile.mp3 
     
+*Note: NXF_VER=23.10.3 set's the Nextflow version. Version 24+ will currently not work.*
 
 #### SLURM
 
 Run:
 
-    nextflow run transcribe.nf -profile docker,slurm --in /path/to/some_audiofile.mp3 
+    NXF_VER=23.10.3 nextflow run transcribe.nf -profile docker,slurm --in /path/to/some_audiofile.mp3 
+
+*Note: NXF_VER=23.10.3 set's the Nextflow version. Version 24+ will currently not work.*
 
 In both cases, some things in nextflow.config might need to be modified.
 
