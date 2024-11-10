@@ -9,7 +9,7 @@ audio_file = file(params.in)
 
 out_dir = ""
 if (params.out_dir == "") {
-  out_dir = "/results/${audio_file.baseName}/"
+  out_dir = "results/${audio_file.baseName}/"
 }
 else if (params.out_dir[-1] != "/") {
   out_dir = params.out_dir + "/"
@@ -129,8 +129,6 @@ process language_id {
       '''
 }
     
-
-
 process mfcc {
     memory '1GB'
     
@@ -211,8 +209,6 @@ process speaker_id {
           '''
 }
 
-
-
 // Do 1-pass decoding using chain online models
 process one_pass_decoding {
     memory '5GB'  
@@ -246,7 +242,6 @@ process one_pass_decoding {
       '''
 }
 
-
 process rnnlm_rescoring {
     memory '5GB'
     
@@ -275,8 +270,6 @@ process rnnlm_rescoring {
       cp -r --preserve=links !{params.acoustic_model}_pruned_unk/graph !{params.acoustic_model}_pruned_rnnlm_unk/
       '''
 }
-
-
 
 process lattice2ctm {
     memory '4GB'
@@ -317,8 +310,6 @@ process lattice2ctm {
       '''
 }
 
-
-
 process to_json {    
     memory '500MB'
     
@@ -342,7 +333,6 @@ process to_json {
           """
 
 }
-
 
 process punctuation {
     memory '4GB'
@@ -372,10 +362,7 @@ process punctuation {
         '''
 }
 
-
-
-
-process output {
+process final_output {
     memory '500MB'
     
     publishDir "${out_dir}", mode: 'copy', overwrite: true
