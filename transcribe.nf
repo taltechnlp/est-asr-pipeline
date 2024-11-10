@@ -376,7 +376,7 @@ process punctuation {
 
 
 
-process output {
+process final_output {
     memory '500MB'
     
     publishDir "${out_dir}", mode: 'copy', overwrite: true
@@ -446,7 +446,7 @@ workflow {
     lattice2ctm( rnnlm_rescoring.out, mfcc.out.datadir_hires )
     to_json( lattice2ctm.out.segmented_ctm, lattice2ctm.out.with_compounds_ctm, speaker_id.out, diarization.out.show_uem_seg) \
       | punctuation
-    output( lattice2ctm.out.with_compounds_ctm, punctuation.out )
+    final_output( lattice2ctm.out.with_compounds_ctm, punctuation.out )
     empty_output( language_id.out.ifEmpty{ 'EMPTY' }, prepare_initial_data_dir.out.ifEmpty{ 'EMPTY' })
 }
 
