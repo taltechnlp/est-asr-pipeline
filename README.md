@@ -31,9 +31,7 @@ Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-con
 
 Run:
 
-    NXF_VER=23.10.3 nextflow run transcribe.nf -profile docker --in /path/to/some_audiofile.mp3 
-
-*Note: NXF_VER=23.10.3 sets the Nextflow version. Version 24+ will currently not work.*
+    nextflow run transcribe.nf -profile docker --in /path/to/some_audiofile.mp3 
 
 If you didn't pull the Docker image before, then the first invocation might take some time, because the required Docker image
 containing all the needed models and libraries is automatically pulled from the remote registry.
@@ -75,23 +73,19 @@ The transcription result in different formats is put to the directory `results/s
 
 Run:
 
-    NXF_VER=23.10.3 nextflow run transcribe.nf -profile docker,sge --in /path/to/some_audiofile.mp3 
+    nextflow run transcribe.nf -profile docker,sge --in /path/to/some_audiofile.mp3 
     
-*Note: NXF_VER=23.10.3 sets the Nextflow version. Version 24+ will currently not work.*
-
 #### SLURM
 
 Run:
 
-    NXF_VER=23.10.3 nextflow run transcribe.nf -profile docker,slurm --in /path/to/some_audiofile.mp3 
-
-*Note: NXF_VER=23.10.3 sets the Nextflow version. Version 24+ will currently not work.*
+    nextflow run transcribe.nf -profile docker,slurm --in /path/to/some_audiofile.mp3 
 
 In both cases, some things in nextflow.config might need to be modified.
 
 ### Running without Docker
 
-TODO
+We are currently only using Docker or Singularity containers and don't provide instructions for installing all dependencies locally.
 
 ### Command line parameters
 

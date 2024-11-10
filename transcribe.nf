@@ -348,7 +348,7 @@ process align {
 
 
 
-process output {
+process final_output {
     memory '500MB'
     
     publishDir "${out_dir}/${basename}", mode: 'copy', overwrite: true
@@ -421,5 +421,5 @@ workflow {
   decode_whisper(to_wav.out.audio)
   postprocess_whisper(decode_whisper.out.audio_tsv)
   align(postprocess_whisper.out.datadir_whisper, to_wav.out.audio)
-  output(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, align.out.alignments_ctm,empty_output.out.empty_result_txt)
+  final_output(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, align.out.alignments_ctm,empty_output.out.empty_result_txt)
 }
