@@ -26,7 +26,9 @@ Pull the required Docker image, containing models and libraries (recommended):
 
 Run:
 
-    nextflow run transcribe.nf --in /path/to/some_audiofile.mp3
+    NXF_VER=22.10.0 nextflow run transcribe.nf --in /path/to/some_audiofile.mp3
+
+*NXF_VER=22.10.0 sets the Nextflow version. Later version don't support the syntax in transcribe.nf*
 
 If you didn't pull the Docker image before, then the first invocation might take some time, because the required Docker image
 containing all the needed models and libraries is automatically pulled from the remote registry.
