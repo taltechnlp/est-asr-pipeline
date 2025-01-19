@@ -9,14 +9,6 @@ params.do_punctuation = true
 params.do_language_id = true
 //audio_file = file(params.in)
 
-out_dir = ""
-if (params.out_dir[-1] != "/") {
-  out_dir = params.out_dir + "/"
-}
-else out_dir = params.out_dir
-
-
-
 
 process to_wav {
     memory '500MB'
@@ -351,7 +343,7 @@ process align {
 process final_output {
     memory '500MB'
     
-    publishDir "${out_dir}/${basename}", mode: 'copy', overwrite: true
+    publishDir "${params.out_dir}", mode: 'copy', overwrite: true
 
     input:
       val basename
@@ -386,7 +378,7 @@ process final_output {
 
 process empty_output {
 
-    publishDir "${out_dir}/${basename}", mode: 'copy', overwrite: true
+    publishDir "${params.out_dir}", mode: 'copy', overwrite: true
 
     input:
       val basename
