@@ -12,9 +12,30 @@ The pre-built model, scripts and Kaldi tookit is consumed via Docker and so Dock
 
 This configuration has only been used on Linux. Because of Docker use other OS-s could be possible but because of configuration tricks used in the nextflow.config files, Dockerizing this project might be easiest.
 
-Install Nextflow locally (depends on Java 8, refer to official documentation in case of troubles):
+Install Java (requires Java 8 or later, see [official documentation](https://www.nextflow.io/docs/latest/install.html) for more instructions). For example, using SDKMAN:
+
+    curl -s https://get.sdkman.io | bash
+
+Reopen terminal to make the `sdk` program available on the terminal. Then:
+
+    sdk install java 17.0.10-tem
+
+Confirm that Java is installed correctly:
+
+    java -version
+
+Install Nextflow locally 
 
     wget -qO- https://get.nextflow.io | bash
+
+Make it excectuable:
+
+    chmod +x nextflow
+
+Move Nextflow into an executable path. For example:
+
+    mkdir -p $HOME/.local/bin/
+    mv nextflow $HOME/.local/bin/
 
 Pull the required Docker image, containing models and libraries (recommended):
 
