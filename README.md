@@ -6,7 +6,7 @@ Nextflow offers great support for container technologies like Docker and differe
 
 ## Installation
 
-The project uses Nextflow which depends mainly on Java. Both should be installed locally. Nextflow 22.10.x or earlier has to be used, newer versions will not work at the moment!
+The project uses Nextflow which depends mainly on Java. Both should be installed locally. Nextflow 23.0.0 or later is required as this project uses DSL v2.
 
 The pre-built model, scripts and Kaldi tookit is consumed via Docker and so Docker also needs to be installed.
 
@@ -47,16 +47,14 @@ Pull the required Docker image, containing models and libraries (recommended):
 
 Run:
 
-    NXF_VER=22.10.0 nextflow run transcribe.nf --in /path/to/some_audiofile.mp3
-
-*NXF_VER=22.10.0 sets the Nextflow version. Later version don't support the syntax in transcribe.nf*
+    nextflow run transcribe.nf --in /path/to/some_audiofile.mp3
 
 If you didn't pull the Docker image before, then the first invocation might take some time, because the required Docker image
 containing all the needed models and libraries is automatically pulled from the remote registry.
 
 A successful invocation will result with something like this:
 
-    N E X T F L O W  ~  version 21.10.6
+    N E X T F L O W  ~  version 23.0.0
     Launching `transcribe.nf` [backstabbing_baekeland] - revision: 7ee707faa8
     executor >  local (12)
     [ae/4b81cd] process > to_wav                   [100%] 1 of 1 ✔
@@ -85,11 +83,11 @@ The transcription result in different formats is put to the directory `results/s
 
 ### Running on cluster
 
-TODO
+Requires change og config. It is configured in the `whisper-gpu` branch and it is recommended to use that branch anyways as the model is better (but requires an NVidia GPU).
 
 ### Running without Docker
 
-TODO
+Not recommended. The Dockerfile might be used to understand what dependencies are required to install but that is prone to errors. 
 
 ### Command line parameters
 

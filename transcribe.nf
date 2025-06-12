@@ -1,5 +1,7 @@
 #!/usr/bin/env nextflow
 
+nextflow.enable.dsl=2
+
 def env = System.getenv()
 params.out_dir = ""
 params.do_speaker_id = true
@@ -16,7 +18,6 @@ else if (params.out_dir[-1] != "/") {
 }
 else out_dir = params.out_dir
 
-
 process to_wav {
     memory '500MB'
     cpus 2
@@ -25,24 +26,23 @@ process to_wav {
     path audio_file
 
     output:
-    file 'audio.wav' into audio
+    path 'audio.wav', emit: audio
     
     shell:
         """
         time (ffmpeg -i !{audio_file} -f sox - | sox  -t sox - -c 1 -b 16 -t wav audio.wav rate -v 16k )
         """
-
 }
 
 process diarization {
     memory '5GB'
     
     input:
-    file audio
+    path audio
 
     output: 
-    file 'show.seg' into show_seg
-    file 'show.uem.seg' into show_uem_seg 
+    path 'show.seg', emit: show_seg
+    path 'show.uem.seg', emit: show_uem_seg 
 
     script:        
         """
@@ -55,11 +55,11 @@ process prepare_initial_data_dir {
     memory '1GB'
 
     input:
-      file show_seg
-      file audio
+    path show_seg
+    path audio
 
     output:
-      path 'init_datadir' into init_datadir optional true
+    path 'init_datadir', emit: init_datadir optional true
 
     shell:
     '''
@@ -89,11 +89,11 @@ process language_id {
     memory '4GB'
     
     input:
-      path init_datadir
-      file audio    
+    path init_datadir
+    path audio    
     
     output:
-      path 'datadir' into datadir optional true
+    path 'datadir', emit: datadir optional true
     
     shell:
     if ( params.do_language_id )
@@ -134,11 +134,11 @@ process mfcc {
     
     input:
     path datadir
-    file audio    
+    path audio    
 
     output:
-    path 'datadir_hires' into datadir_hires
-    path 'ivectors' into ivectors
+    path 'datadir_hires', emit: datadir_hires
+    path 'ivectors', emit: ivectors
 
     shell:
     '''
@@ -162,12 +162,12 @@ process speaker_id {
     cpus params.nthreads
     
     input:
-      path datadir
-      file audio    
-      path conf from "$projectDir/conf"
+    path datadir
+    path audio    
+    path conf
 
     output:
-      file 'sid-result.json' into sid_result
+    path 'sid-result.json', emit: sid_result
 
     shell:
         if (params.do_speaker_id)
@@ -209,22 +209,18 @@ process speaker_id {
           '''
 }
 
-// Do 1-pass decoding using chain online models
 process one_pass_decoding {
     memory '5GB'  
     cpus params.nthreads
     
-    // Do 1-pass decoding using chain online models
     input:
-      path datadir_hires
-      path ivectors
-      //path build from params.build_dir 
-      path conf from "$projectDir/conf"
-	
-    output:
-      path "${params.acoustic_model}_pruned_unk" into pruned_unk
-   
+    path datadir_hires
+    path ivectors
+    path conf
     
+    output:
+    path "${params.acoustic_model}_pruned_unk", emit: pruned_unk
+   
     shell:
       '''
       . !{projectDir}/bin/prepare_process.sh
@@ -246,12 +242,11 @@ process rnnlm_rescoring {
     memory '5GB'
     
     input:
-    
-      path pruned_unk from pruned_unk
-      path datadir_hires
+    path pruned_unk
+    path datadir_hires
 
     output:
-      path "${params.acoustic_model}_pruned_rnnlm_unk" into pruned_rnnlm_unk
+    path "${params.acoustic_model}_pruned_rnnlm_unk", emit: pruned_rnnlm_unk
 
     shell:
       '''
@@ -276,12 +271,12 @@ process lattice2ctm {
     cpus 2
     
     input:
-      path pruned_rnnlm_unk from pruned_rnnlm_unk
-      path datadir_hires
+    path pruned_rnnlm_unk
+    path datadir_hires
 
     output:
-      file 'segmented.ctm' into segmented_ctm
-      file 'with-compounds.ctm' into with_compounds_ctm
+    path 'segmented.ctm', emit: segmented_ctm
+    path 'with-compounds.ctm', emit: with_compounds_ctm
 
     shell:
       '''
@@ -314,13 +309,13 @@ process to_json {
     memory '500MB'
     
     input:
-      file segmented_ctm
-      file with_compounds_ctm
-      file sid_result
-      file show_uem_seg
+    path segmented_ctm
+    path with_compounds_ctm
+    path sid_result
+    path show_uem_seg
 
     output:
-      file "unpunctuated.json" into unpunctuated_json
+    path "unpunctuated.json", emit: unpunctuated_json
 
     shell:
       if (params.do_speaker_id)
@@ -331,17 +326,16 @@ process to_json {
           """
           python3 !{projectDir}/bin/segmented_ctm2json.py --pms-seg !{show_uem_seg} !{segmented_ctm} > unpunctuated.json
           """
-
 }
 
 process punctuation {
     memory '4GB'
     
     input:
-      file unpunctuated_json
+    path unpunctuated_json
 
     output:
-      file "punctuated.json" into punctuated_json
+    path "punctuated.json", emit: punctuated_json
 
     shell:
       if (params.do_punctuation)
@@ -368,15 +362,15 @@ process final_output {
     publishDir "${out_dir}", mode: 'copy', overwrite: true
 
     input:
-      file with_compounds_ctm
-      file punctuated_json
+    path with_compounds_ctm
+    path punctuated_json
 
     output:
-      file "result.json" into result_json
-      file "result.srt" into result_srt
-      file "result.trs" into result_trs
-      file "result.ctm" into result_ctm
-      file "result.with-compounds.ctm" into result_with_compounds_ctm
+    path "result.json", emit: result_json
+    path "result.srt", emit: result_srt
+    path "result.trs", emit: result_trs
+    path "result.ctm", emit: result_ctm
+    path "result.with-compounds.ctm", emit: result_with_compounds_ctm
 
     script:
       json = punctuated_json
@@ -392,21 +386,20 @@ process final_output {
 }
 
 process empty_output {
-
     publishDir "${out_dir}", mode: 'copy', overwrite: true
 
     input:
-      val a from datadir.ifEmpty{ 'EMPTY' }
-      val b from init_datadir.ifEmpty{ 'EMPTY' }
+    val a
+    val b
     when:
-      a == 'EMPTY' || b == 'EMPTY' 
+    a == 'EMPTY' || b == 'EMPTY' 
 
     output:
-      file "result.json" into empty_result_json
-      file "result.srt" into empty_result_srt
-      file "result.trs" into empty_result_trs
-      file "result.ctm" into empty_result_ctm
-      file "result.with-compounds.ctm" into empty_result_with_compounds_ctm
+    path "result.json", emit: empty_result_json
+    path "result.srt", emit: empty_result_srt
+    path "result.trs", emit: empty_result_trs
+    path "result.ctm", emit: empty_result_ctm
+    path "result.with-compounds.ctm", emit: empty_result_with_compounds_ctm
 
     script:
       json = file("assets/empty.json")
@@ -416,5 +409,46 @@ process empty_output {
       json2trs.py $json > result.trs      
       touch result.srt result.ctm result.with-compounds.ctm
       """
+}
+
+workflow {
+    // Convert audio to WAV format
+    to_wav(audio_file)
+    
+    // Perform diarization
+    diarization(to_wav.out.audio)
+    
+    // Prepare initial data directory
+    prepare_initial_data_dir(diarization.out.show_seg, to_wav.out.audio)
+    
+    // Language identification
+    language_id(prepare_initial_data_dir.out.init_datadir, to_wav.out.audio)
+    
+    // Extract MFCC features
+    mfcc(language_id.out.datadir, to_wav.out.audio)
+    
+    // Speaker identification
+    speaker_id(language_id.out.datadir, to_wav.out.audio, file("$projectDir/conf"))
+    
+    // One-pass decoding
+    one_pass_decoding(mfcc.out.datadir_hires, mfcc.out.ivectors, file("$projectDir/conf"))
+    
+    // RNNLM rescoring
+    rnnlm_rescoring(one_pass_decoding.out.pruned_unk, mfcc.out.datadir_hires)
+    
+    // Convert lattice to CTM
+    lattice2ctm(rnnlm_rescoring.out.pruned_rnnlm_unk, mfcc.out.datadir_hires)
+    
+    // Convert to JSON
+    to_json(lattice2ctm.out.segmented_ctm, lattice2ctm.out.with_compounds_ctm, speaker_id.out.sid_result, diarization.out.show_uem_seg)
+    
+    // Add punctuation
+    punctuation(to_json.out.unpunctuated_json)
+    
+    // Generate final output
+    final_output(lattice2ctm.out.with_compounds_ctm, punctuation.out.punctuated_json)
+    
+    // Handle empty output case
+    empty_output(language_id.out.datadir.ifEmpty{ 'EMPTY' }, prepare_initial_data_dir.out.init_datadir.ifEmpty{ 'EMPTY' })
 }
 
