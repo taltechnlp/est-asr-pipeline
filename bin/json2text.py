@@ -21,8 +21,8 @@ def extract_text_from_json(json_data):
                     turn_text = " ".join([get_word(word) for word in words])
                     text_parts.append(turn_text)
     
-    # Join all turns with spaces
-    return " ".join(text_parts)
+    # Join all turns with line breaks
+    return "\n".join(text_parts)
 
 def main():
     parser = argparse.ArgumentParser("Converts JSON format to plain text")
