@@ -371,6 +371,7 @@ process final_output {
     path "result.trs", emit: result_trs
     path "result.ctm", emit: result_ctm
     path "result.with-compounds.ctm", emit: result_with_compounds_ctm
+    path "result.txt", emit: result_txt
 
     script:
       json = punctuated_json
@@ -382,6 +383,7 @@ process final_output {
       cat result.ctm | ctm2with-sil-ctm.py > result.with-compounds.ctm
       json2trs.py --fid trs $json > result.trs
       json2srt.py result.json > result.srt
+      json2text.py result.json > result.txt
       """
 }
 
@@ -400,6 +402,7 @@ process empty_output {
     path "result.trs", emit: empty_result_trs
     path "result.ctm", emit: empty_result_ctm
     path "result.with-compounds.ctm", emit: empty_result_with_compounds_ctm
+    path "result.txt", emit: empty_result_txt
 
     script:
       json = file("assets/empty.json")
@@ -408,6 +411,7 @@ process empty_output {
       cp $json result.json
       json2trs.py $json > result.trs      
       touch result.srt result.ctm result.with-compounds.ctm
+      json2text.py result.json > result.txt
       """
 }
 
