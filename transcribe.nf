@@ -29,7 +29,7 @@ process to_wav {
 }
 
 process diarization {
-    memory '5GB'
+    memory '20GB'
     label 'with_gpu'
     
     input:
