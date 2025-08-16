@@ -1,0 +1,12 @@
+# Extend the original container with pure beam search script
+FROM europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
+
+# Copy the pure beam search script
+COPY bin/whisper-pure-beam.py /opt/est-asr-pipeline/bin/
+RUN chmod +x /opt/est-asr-pipeline/bin/whisper-pure-beam.py
+
+# Install additional required packages
+RUN pip install scipy
+
+# Verify setup
+RUN python3 -c "import ctranslate2; from faster_whisper import WhisperModel; print('Pure beam search ready')"

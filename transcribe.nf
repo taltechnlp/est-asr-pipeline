@@ -214,7 +214,7 @@ process decode_whisper {
       path audio    
       
     output:
-      path 'audio.tsv', emit: audio_tsv
+      path 'audio.json', emit: audio_json
       
     shell:
       '''
@@ -224,7 +224,7 @@ process decode_whisper {
       #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
       #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-medium-et-v4-ct2 !{audio} datadir_25sec/segments | cut -f 2- -d " " | perl -npe \'s/(\\S)([,.!?:])/\\1 \\2/g\' | paste <(cut -f 1 -d " " datadir_25sec/segments) - | tee trans.hyp
       
-      whisper-ctranslate2 --vad_filter True --language et --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 !{audio} --beam_size 2
+      whisper-pure-beam.py !{audio} --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 --beam_size 5 --num_hypotheses 5 --language et --device auto > audio.json
       #whisper-ctranslate2 --device cuda --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-v2-ct2 !{audio} --beam_size  1 --vad_filter True
       #whisper-ctranslate2 --device cuda --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-20240510-ct2 !{audio} --beam_size  3 --vad_filter True
       
@@ -254,6 +254,97 @@ process postprocess_whisper {
           awk '{print($1, $1)}' datadir_whisper/segments > datadir_whisper/utt2spk
           awk '{print($1, $1)}' datadir_whisper/segments > datadir_whisper/spk2utt
       fi      
+      '''
+}
+
+process postprocess_whisper_nbest {
+    memory '2GB'
+    cpus 1
+
+    input:
+      path audio_json
+      
+    output:
+      path 'datadir_whisper', emit: datadir_whisper, optional:true
+      path 'alternatives.json', emit: alternatives_json, optional:true
+      
+    shell:
+      '''
+      . !{projectDir}/bin/prepare_process.sh
+      
+      # Check if JSON file exists and has content
+      if [ -s !{audio_json} ]; then
+          # Parse JSON from our custom faster-whisper script
+          python3 -c "
+import json
+import sys
+
+# Load our custom whisper JSON output
+with open('!{audio_json}', 'r') as f:
+    whisper_data = json.load(f)
+
+# Check if segments exist
+if 'segments' not in whisper_data or len(whisper_data['segments']) == 0:
+    sys.exit(0)
+
+# Create Kaldi datadir structure using best hypothesis (rank 1)
+import os
+os.makedirs('datadir_whisper', exist_ok=True)
+
+with open('datadir_whisper/reco2file_and_channel', 'w') as f:
+    f.write('audio audio A\\n')
+
+with open('datadir_whisper/wav.scp', 'w') as f:
+    f.write('audio audio.wav\\n')
+
+segments_lines = []
+text_lines = []
+
+for i, segment in enumerate(whisper_data['segments']):
+    utt_id = f'{i+1:04d}'
+    start_time = segment['start']
+    end_time = segment['end']
+    
+    # Use best hypothesis (rank 1) for alignment
+    best_text = ''
+    if 'alternatives' in segment and segment['alternatives']:
+        best_text = segment['alternatives'][0]['text'].strip()
+    else:
+        # Fallback if no alternatives structure
+        best_text = segment.get('text', '').strip()
+    
+    segments_lines.append(f'{utt_id} audio {start_time:.3f} {end_time:.3f}')
+    text_lines.append(f'{utt_id} {best_text}')
+
+with open('datadir_whisper/segments', 'w') as f:
+    f.write('\\n'.join(segments_lines) + '\\n')
+
+with open('datadir_whisper/text', 'w') as f:
+    f.write('\\n'.join(text_lines) + '\\n')
+
+# Create utt2spk and spk2utt (each utterance is its own speaker for now)
+utt2spk_lines = []
+for i in range(len(whisper_data['segments'])):
+    utt_id = f'{i+1:04d}'
+    utt2spk_lines.append(f'{utt_id} {utt_id}')
+
+with open('datadir_whisper/utt2spk', 'w') as f:
+    f.write('\\n'.join(utt2spk_lines) + '\\n')
+
+with open('datadir_whisper/spk2utt', 'w') as f:
+    f.write('\\n'.join(utt2spk_lines) + '\\n')
+
+# Save alternatives data (already in correct format from our script)
+alternatives_data = {
+    'text': whisper_data.get('text', ''),
+    'language': whisper_data.get('language', 'et'),
+    'segments': whisper_data.get('segments', [])
+}
+
+with open('alternatives.json', 'w') as f:
+    json.dump(alternatives_data, f, indent=2, ensure_ascii=False)
+"
+      fi
       '''
 }
 
@@ -375,6 +466,79 @@ process final_output {
       '''
 }
 
+process final_output_nbest {
+    memory '500MB'
+    
+    publishDir "${params.out_dir}", mode: 'copy', overwrite: true
+
+    input:
+      val basename
+      path datadir
+      path show_rttm
+      path sid_result
+      path alignments_json
+      path alternatives_json
+      path empty_result_txt
+
+    output:
+      path "result.json"
+
+    shell:
+      '''
+      # First create the standard result with word-level alignments for best hypothesis
+      resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
+      
+      normalize_json.py words2numbers.py punctuated.json > best_result.json
+
+      # Combine best result with alternatives
+      python3 -c "
+import json
+import sys
+
+# Load best result with word-level alignments
+try:
+    with open('best_result.json', 'r') as f:
+        best_result = json.load(f)
+except:
+    best_result = {'monologues': []}
+
+# Load alternatives
+try:
+    with open('!{alternatives_json}', 'r') as f:
+        alternatives_data = json.load(f)
+except:
+    alternatives_data = {'segments': []}
+
+# Create final result structure
+final_result = {
+    'best_hypothesis': best_result,
+    'alternatives': {
+        'language': alternatives_data.get('language', 'et'),
+        'segments': []
+    },
+    'metadata': {
+        'n_best': 5,
+        'has_word_alignments': True,
+        'basename': '!{basename}'
+    }
+}
+
+# Add segment-level alternatives
+for segment in alternatives_data.get('segments', []):
+    segment_alts = {
+        'start': segment['start'],
+        'end': segment['end'],
+        'alternatives': segment.get('alternatives', [])
+    }
+    final_result['alternatives']['segments'].append(segment_alts)
+
+# Output final result
+with open('result.json', 'w') as f:
+    json.dump(final_result, f, indent=2, ensure_ascii=False)
+"
+      '''
+}
+
 
 process empty_output {
 
@@ -411,7 +575,7 @@ workflow {
   language_id(prepare_initial_data_dir.out.init_datadir, to_wav.out.audio)
   speaker_id(language_id.out.datadir, to_wav.out.audio)
   decode_whisper(to_wav.out.audio)
-  postprocess_whisper(decode_whisper.out.audio_tsv)
-  align(postprocess_whisper.out.datadir_whisper, to_wav.out.audio)
-  final_output(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, align.out.alignments_ctm,empty_output.out.empty_result_txt)
+  postprocess_whisper_nbest(decode_whisper.out.audio_json)
+  align(postprocess_whisper_nbest.out.datadir_whisper, to_wav.out.audio)
+  final_output_nbest(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, postprocess_whisper_nbest.out.alternatives_json, empty_output.out.empty_result_txt)
 }

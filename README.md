@@ -97,6 +97,16 @@ Firstly, the main script (transcribe.nf) already has default values for input pa
 -   `--do_punctuation true|false` - Whether to attempt punctuation recovery and add punctuation to the transcribed text. By default `true`.
 -   `--do_language_id true|false` - Whether to apply a language ID model to discard speech segements that are not in Estonian. By default `true`.
 
+### N-Best Beam Search
+
+The pipeline now supports generating **5 alternative transcription hypotheses** using beam search with temperature variation. The output includes:
+
+- **Best hypothesis** with word-level timestamps and speaker diarization
+- **5 alternative transcriptions** per segment with confidence scores (avg_logprob)
+- **JSON-only output** containing both the aligned best result and segment-level alternatives
+
+The n-best functionality uses a custom faster-whisper implementation that generates multiple hypotheses through temperature sampling (0.0, 0.1, 0.2, 0.3, 0.4), providing genuine transcription variations for each audio segment.
+
 ### Command line options
 
 Nextflow allows additional command line options:
