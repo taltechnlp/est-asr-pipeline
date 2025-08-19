@@ -107,6 +107,13 @@ The pipeline now supports generating **5 alternative transcription hypotheses** 
 
 The n-best functionality uses a custom faster-whisper implementation that generates multiple hypotheses through temperature sampling (0.0, 0.1, 0.2, 0.3, 0.4), providing genuine transcription variations for each audio segment.
 
+### Schema Definitions
+
+TypeScript type definitions and JSON schema files for the transcription output format are available in the `schema/` folder:
+
+- `schema/types.ts` - TypeScript interfaces for the complete transcription result structure
+- `schema/schema.json` - JSON Schema for validation of transcription output
+
 ### Command line options
 
 Nextflow allows additional command line options:

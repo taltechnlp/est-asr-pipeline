@@ -1,0 +1,150 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Transcription Result Schema",
+  "description": "Schema for ASR pipeline transcription output",
+  "type": "object",
+  "required": ["best_hypothesis", "alternatives", "metadata"],
+  "properties": {
+    "best_hypothesis": {
+      "type": "object",
+      "required": ["speakers", "sections"],
+      "properties": {
+        "speakers": {
+          "type": "object",
+          "patternProperties": {
+            "^SPEAKER_\\d+$": {
+              "type": "object"
+            }
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["type", "start", "end"],
+            "properties": {
+              "type": {
+                "type": "string",
+                "const": "speech"
+              },
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              },
+              "turns": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["speaker", "start", "end", "transcript", "words", "unnormalized_transcript"],
+                  "properties": {
+                    "speaker": {
+                      "type": "string",
+                      "pattern": "^SPEAKER_\\d+$"
+                    },
+                    "start": {
+                      "type": "number"
+                    },
+                    "end": {
+                      "type": "number"
+                    },
+                    "transcript": {
+                      "type": "string"
+                    },
+                    "unnormalized_transcript": {
+                      "type": "string"
+                    },
+                    "words": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "required": ["word_with_punctuation", "start", "end", "word", "punctuation"],
+                        "properties": {
+                          "word_with_punctuation": {
+                            "type": "string"
+                          },
+                          "start": {
+                            "type": "number"
+                          },
+                          "end": {
+                            "type": "number"
+                          },
+                          "word": {
+                            "type": "string"
+                          },
+                          "punctuation": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "object",
+      "required": ["language", "segments"],
+      "properties": {
+        "language": {
+          "type": "string"
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["start", "end", "alternatives"],
+            "properties": {
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              },
+              "alternatives": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["rank", "text", "avg_logprob"],
+                  "properties": {
+                    "rank": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "avg_logprob": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["n_best", "has_word_alignments", "basename"],
+      "properties": {
+        "n_best": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "has_word_alignments": {
+          "type": "boolean"
+        },
+        "basename": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
