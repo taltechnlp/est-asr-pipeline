@@ -148,10 +148,8 @@ def get_pure_beam_search_nbest(model_dir, audio_path, beam_size=5, num_hypothese
                 
                 # Handle different sequence formats
                 if isinstance(sequence[0], str):
-                    # Already decoded tokens - join them and fix encoding
+                    # Already decoded tokens - join them and clean up
                     text = "".join(sequence).replace("Ġ", " ").strip()
-                    # Fix UTF-8 encoding issues
-                    text = text.encode('latin1').decode('utf-8', errors='ignore')
                 else:
                     # Token IDs - decode normally
                     token_ids = [int(token) for token in sequence]
