@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
   postprocessor = Popen(args.cmd, shell=True, stdin=PIPE, stdout=PIPE)
 
-  trans = json.load(open(args.json))
+  trans = json.load(open(args.json, 'r', encoding='utf-8'))
   
   postprocess_sections(trans["sections"], postprocessor)
   

@@ -95,6 +95,10 @@ def get_pure_beam_search_nbest(model_dir, audio_path, beam_size=5, num_hypothese
     tokenizer = faster_model.hf_tokenizer  # Get tokenizer
     feature_extractor = faster_model.feature_extractor  # Get feature extractor
     
+    # Ensure tokenizer handles UTF-8 properly
+    if hasattr(tokenizer, 'errors'):
+        tokenizer.errors = 'ignore'  # Handle encoding errors gracefully
+    
     logging.info(f"Using device: {device}")
     logging.info(f"Model loaded. Beam size: {beam_size}, Num hypotheses: {num_hypotheses}")
     
@@ -150,16 +154,33 @@ def get_pure_beam_search_nbest(model_dir, audio_path, beam_size=5, num_hypothese
                 if isinstance(sequence[0], str):
                     # Already decoded tokens - join them and clean up
                     text = "".join(sequence).replace("Ġ", " ").strip()
-                    # Fix encoding: text is UTF-8 bytes interpreted as Latin-1, decode properly
+                    # Fix encoding: Estonian model outputs UTF-8 bytes as Latin-1, need to fix
                     try:
-                        text = text.encode('latin-1').decode('utf-8')
+                        fixed_text = text.encode('latin-1').decode('utf-8')
+                        text = fixed_text
                     except (UnicodeEncodeError, UnicodeDecodeError):
-                        # If encoding fix fails, keep original text
-                        pass
+                        # If fix fails, keep original but try alternative approach
+                        try:
+                            # Alternative: fix specific Estonian character sequences
+                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
+                        except:
+                            pass
                 else:
                     # Token IDs - decode normally
                     token_ids = [int(token) for token in sequence]
                     text = tokenizer.decode(token_ids, skip_special_tokens=True).strip()
+                    
+                    # Fix encoding: Estonian model tokenizer outputs UTF-8 bytes as Latin-1
+                    try:
+                        fixed_text = text.encode('latin-1').decode('utf-8')
+                        text = fixed_text
+                    except (UnicodeEncodeError, UnicodeDecodeError):
+                        # If fix fails, keep original but try alternative approach
+                        try:
+                            # Alternative: fix specific Estonian character sequences
+                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
+                        except:
+                            pass
                 
                 alternatives.append({
                     "rank": hyp_idx + 1,

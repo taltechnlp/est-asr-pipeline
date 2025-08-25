@@ -218,6 +218,9 @@ process decode_whisper {
       
     shell:
       '''
+      export LANG=C.UTF-8
+      export LC_ALL=C.UTF-8
+      
       #python -c "import torch; print(torch.cuda.is_available()); print(torch.backends.cudnn.version())"
       export LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`:$LD_LIBRARY_PATH
       
@@ -270,6 +273,9 @@ process postprocess_whisper_nbest {
       
     shell:
       '''
+      export LANG=C.UTF-8
+      export LC_ALL=C.UTF-8
+      
       . !{projectDir}/bin/prepare_process.sh
       
       # Check if JSON file exists and has content
@@ -454,6 +460,9 @@ process final_output {
 
     shell:
       '''
+      export LANG=C.UTF-8
+      export LC_ALL=C.UTF-8
+      
       resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
       
       normalize_json.py words2numbers.py punctuated.json > result.json
@@ -485,6 +494,9 @@ process final_output_nbest {
 
     shell:
       '''
+      export LANG=C.UTF-8
+      export LC_ALL=C.UTF-8
+      
       # First create the standard result with word-level alignments for best hypothesis
       resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
       
@@ -497,14 +509,14 @@ import sys
 
 # Load best result with word-level alignments
 try:
-    with open('best_result.json', 'r') as f:
+    with open('best_result.json', 'r', encoding='utf-8') as f:
         best_result = json.load(f)
 except:
     best_result = {'monologues': []}
 
 # Load alternatives
 try:
-    with open('!{alternatives_json}', 'r') as f:
+    with open('!{alternatives_json}', 'r', encoding='utf-8') as f:
         alternatives_data = json.load(f)
 except:
     alternatives_data = {'segments': []}
@@ -533,7 +545,7 @@ for segment in alternatives_data.get('segments', []):
     final_result['alternatives']['segments'].append(segment_alts)
 
 # Output final result
-with open('result.json', 'w') as f:
+with open('result.json', 'w', encoding='utf-8') as f:
     json.dump(final_result, f, indent=2, ensure_ascii=False)
 "
       '''

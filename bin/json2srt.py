@@ -110,7 +110,7 @@ parser.add_argument('json', help="JSON input file")
       
 args = parser.parse_args()
       
-trans = json.load(open(args.json))
+trans = json.load(open(args.json, 'r', encoding='utf-8'))
 
 sections = trans["sections"]
 j = 1

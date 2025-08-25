@@ -146,7 +146,7 @@ print(sections, file=sys.stderr)
  
 speakers = {}
 
-words = json.load(open(args.alignments_json))
+words = json.load(open(args.alignments_json, 'r', encoding='utf-8'))
 
 uppercase_next = True
 last_speaker_id = None
@@ -185,7 +185,7 @@ if not args.pms_seg:
     sections[0]["end"] = sections[0]["turns"][-1]["end"]
 
 if args.speaker_names:
-  speakers.update(json.load(open(args.speaker_names)))
+  speakers.update(json.load(open(args.speaker_names, 'r', encoding='utf-8')))
   
 
 result['speakers'] = speakers
