@@ -205,13 +205,14 @@ process prepare_data_for_whisper {
 }
 
 
-process decode_whisper {
+process decode_whisper_segment_aware {
     memory '8GB'
     cpus 1
     label 'with_gpu'
 
     input:
       path audio    
+      path datadir
       
     output:
       path 'audio.json', emit: audio_json
@@ -221,15 +222,9 @@ process decode_whisper {
       export LANG=C.UTF-8
       export LC_ALL=C.UTF-8
       
-      #python -c "import torch; print(torch.cuda.is_available()); print(torch.backends.cudnn.version())"
       export LD_LIBRARY_PATH=`python3 -c 'import os; import nvidia.cublas.lib; import nvidia.cudnn.lib; print(os.path.dirname(nvidia.cublas.lib.__file__) + ":" + os.path.dirname(nvidia.cudnn.lib.__file__))'`:$LD_LIBRARY_PATH
       
-      #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-large-et-v3-ct2 !{audio} datadir_25sec/segments | tee trans.hyp
-      #whisper-transcribe.py --beam 1 --is_multilingual --language et !{params.rootdir}/models/whisper-medium-et-v4-ct2 !{audio} datadir_25sec/segments | cut -f 2- -d " " | perl -npe \'s/(\\S)([,.!?:])/\\1 \\2/g\' | paste <(cut -f 1 -d " " datadir_25sec/segments) - | tee trans.hyp
-      
-      whisper-pure-beam.py !{audio} --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 --beam_size 5 --num_hypotheses 5 --language et --device auto > audio.json
-      #whisper-ctranslate2 --device cuda --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-v2-ct2 !{audio} --beam_size  1 --vad_filter True
-      #whisper-ctranslate2 --device cuda --language et --model_directory  !{params.rootdir}/models/whisper-large-et-orth-20240510-ct2 !{audio} --beam_size  3 --vad_filter True
+      whisper-segment-aware.py !{audio} --model_directory !{params.rootdir}/models/whisper-medium-et-v5-ct2 --segments_datadir !{datadir} --beam_size 5 --num_hypotheses 5 --language et --device auto > audio.json
       
       '''
 }
@@ -307,9 +302,17 @@ segments_lines = []
 text_lines = []
 
 for i, segment in enumerate(whisper_data['segments']):
-    utt_id = f'{i+1:04d}'
+    # Use segment_id if available, otherwise create utterance ID
+    if 'segment_id' in segment:
+        utt_id = segment['segment_id']
+    else:
+        utt_id = f'{i+1:04d}'
+    
     start_time = segment['start']
     end_time = segment['end']
+    
+    # Get speaker if available
+    speaker = segment.get('speaker', 'unknown')
     
     # Use best hypothesis (rank 1) for alignment
     best_text = ''
@@ -328,17 +331,34 @@ with open('datadir_whisper/segments', 'w') as f:
 with open('datadir_whisper/text', 'w') as f:
     f.write('\\n'.join(text_lines) + '\\n')
 
-# Create utt2spk and spk2utt (each utterance is its own speaker for now)
+# Create utt2spk and spk2utt using actual speaker information
 utt2spk_lines = []
-for i in range(len(whisper_data['segments'])):
-    utt_id = f'{i+1:04d}'
-    utt2spk_lines.append(f'{utt_id} {utt_id}')
+spk2utt_dict = {}
+
+for segment in whisper_data['segments']:
+    # Use segment_id if available, otherwise create utterance ID
+    if 'segment_id' in segment:
+        utt_id = segment['segment_id']
+    else:
+        utt_id = f'{whisper_data[\"segments\"].index(segment)+1:04d}'
+    
+    speaker = segment.get('speaker', 'unknown')
+    utt2spk_lines.append(f'{utt_id} {speaker}')
+    
+    if speaker not in spk2utt_dict:
+        spk2utt_dict[speaker] = []
+    spk2utt_dict[speaker].append(utt_id)
 
 with open('datadir_whisper/utt2spk', 'w') as f:
     f.write('\\n'.join(utt2spk_lines) + '\\n')
 
+# Create spk2utt
+spk2utt_lines = []
+for speaker, utts in spk2utt_dict.items():
+    spk2utt_lines.append(f'{speaker} {\" \".join(utts)}')
+
 with open('datadir_whisper/spk2utt', 'w') as f:
-    f.write('\\n'.join(utt2spk_lines) + '\\n')
+    f.write('\\n'.join(spk2utt_lines) + '\\n')
 
 # Save alternatives data (already in correct format from our script)
 alternatives_data = {
@@ -586,8 +606,8 @@ workflow {
   prepare_initial_data_dir(diarization.out.show_rttm, to_wav.out.audio)
   language_id(prepare_initial_data_dir.out.init_datadir, to_wav.out.audio)
   speaker_id(language_id.out.datadir, to_wav.out.audio)
-  decode_whisper(to_wav.out.audio)
-  postprocess_whisper_nbest(decode_whisper.out.audio_json)
+  decode_whisper_segment_aware(to_wav.out.audio, language_id.out.datadir)
+  postprocess_whisper_nbest(decode_whisper_segment_aware.out.audio_json)
   align(postprocess_whisper_nbest.out.datadir_whisper, to_wav.out.audio)
   final_output_nbest(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, postprocess_whisper_nbest.out.alternatives_json, empty_output.out.empty_result_txt)
 }
