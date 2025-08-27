@@ -325,6 +325,10 @@ for i, segment in enumerate(whisper_data['segments']):
     segments_lines.append(f'{utt_id} audio {start_time:.3f} {end_time:.3f}')
     text_lines.append(f'{utt_id} {best_text}')
 
+# Sort segments and text by utterance ID
+segments_lines.sort()
+text_lines.sort()
+
 with open('datadir_whisper/segments', 'w') as f:
     f.write('\\n'.join(segments_lines) + '\\n')
 
@@ -349,12 +353,16 @@ for segment in whisper_data['segments']:
         spk2utt_dict[speaker] = []
     spk2utt_dict[speaker].append(utt_id)
 
+# Sort utt2spk lines by utterance ID (Kaldi requirement)
+utt2spk_lines.sort()
+
 with open('datadir_whisper/utt2spk', 'w') as f:
     f.write('\\n'.join(utt2spk_lines) + '\\n')
 
-# Create spk2utt
+# Create spk2utt and sort utterances within each speaker
 spk2utt_lines = []
-for speaker, utts in spk2utt_dict.items():
+for speaker in sorted(spk2utt_dict.keys()):
+    utts = sorted(spk2utt_dict[speaker])
     spk2utt_lines.append(f'{speaker} {\\\" \\\".join(utts)}')
 
 with open('datadir_whisper/spk2utt', 'w') as f:
