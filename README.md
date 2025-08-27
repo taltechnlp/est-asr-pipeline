@@ -20,7 +20,11 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 Pull the required Docker image, containing models and libraries (recommended):
 
 
-    docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
+    docker pull est-asr-pipeline:speaker-turn-nbest
+
+Or build the Docker image locally:
+
+    docker build -t est-asr-pipeline:speaker-turn-nbest .
 
 Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-container-runtime)
 
@@ -97,15 +101,20 @@ Firstly, the main script (transcribe.nf) already has default values for input pa
 -   `--do_punctuation true|false` - Whether to attempt punctuation recovery and add punctuation to the transcribed text. By default `true`.
 -   `--do_language_id true|false` - Whether to apply a language ID model to discard speech segements that are not in Estonian. By default `true`.
 
-### N-Best Beam Search
+### N-Best Beam Search with Speaker-Turn Alignment
 
-The pipeline now supports generating **5 alternative transcription hypotheses** using beam search with temperature variation. The output includes:
+The pipeline now supports generating **5 alternative transcription hypotheses** using beam search aligned to complete speaker turns. The output includes:
 
 - **Best hypothesis** with word-level timestamps and speaker diarization
-- **5 alternative transcriptions** per segment with confidence scores (avg_logprob)
-- **JSON-only output** containing both the aligned best result and segment-level alternatives
+- **5 alternative transcriptions** per speaker turn with confidence scores (avg_logprob)
+- **JSON-only output** containing both the aligned best result and turn-level alternatives
 
-The n-best functionality uses a custom faster-whisper implementation that generates multiple hypotheses through temperature sampling (0.0, 0.1, 0.2, 0.3, 0.4), providing genuine transcription variations for each audio segment.
+Key improvements:
+- **Speaker-turn-based segmentation**: N-best alternatives are generated for complete speaker turns, not arbitrary time segments
+- **Diarization-aware processing**: Each speaker segment is processed individually to maintain speaker boundaries
+- **Full-turn alternatives**: Each n-best hypothesis represents a complete utterance from a single speaker
+
+The n-best functionality uses a custom segment-aware whisper implementation that respects speaker diarization results, ensuring that alternative transcriptions correspond to meaningful speech units rather than random time slices.
 
 ### Schema Definitions
 
