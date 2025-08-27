@@ -491,7 +491,7 @@ process final_output {
       export LANG=C.UTF-8
       export LC_ALL=C.UTF-8
       
-      resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
+      resegment_json.py --new-turn-sil-length 2.5 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
       
       normalize_json.py words2numbers.py punctuated.json > result.json
 
@@ -526,7 +526,7 @@ process final_output_nbest {
       export LC_ALL=C.UTF-8
       
       # First create the standard result with word-level alignments for best hypothesis
-      resegment_json.py --new-turn-sil-length 1.0 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
+      resegment_json.py --new-turn-sil-length 2.5 --speaker-names !{sid_result} --rttm !{show_rttm} !{datadir} !{alignments_json} > punctuated.json
       
       normalize_json.py words2numbers.py punctuated.json > best_result.json
 
