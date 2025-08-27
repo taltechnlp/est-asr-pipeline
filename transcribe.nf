@@ -355,7 +355,7 @@ with open('datadir_whisper/utt2spk', 'w') as f:
 # Create spk2utt
 spk2utt_lines = []
 for speaker, utts in spk2utt_dict.items():
-    spk2utt_lines.append(f'{speaker} {\" \".join(utts)}')
+    spk2utt_lines.append(f'{speaker} {\\\" \\\".join(utts)}')
 
 with open('datadir_whisper/spk2utt', 'w') as f:
     f.write('\\n'.join(spk2utt_lines) + '\\n')
