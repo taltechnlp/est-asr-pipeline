@@ -14,7 +14,8 @@ echo "⚠️  Note: First time will download base image (europe-north1-docker.pk
 echo "🐳 Starting Docker build process (extending existing image)..."
 echo ""
 
-# Build the Docker image using the speaker-turn-nbest Dockerfile
+# Build the Docker image using the speaker-turn-nbest Dockerfile with buildx (fallback to legacy build)
+docker buildx build -f Dockerfile.speaker-turn-nbest -t "$IMAGE_NAME" --load . 2>/dev/null || \
 docker build -f Dockerfile.speaker-turn-nbest -t "$IMAGE_NAME" . || {
     echo ""
     echo "❌ Docker build failed!"
@@ -23,7 +24,8 @@ docker build -f Dockerfile.speaker-turn-nbest -t "$IMAGE_NAME" . || {
     echo "  1. Check if Docker is running: docker ps"
     echo "  2. Pull the base image first: docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b"
     echo "  3. Ensure you have sufficient disk space (>5GB recommended)"
-    echo "  4. Check Docker logs for specific error details"
+    echo "  4. If buildx issues, try: docker buildx install"
+    echo "  5. Check Docker logs for specific error details"
     echo ""
     exit 1
 }

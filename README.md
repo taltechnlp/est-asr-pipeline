@@ -27,7 +27,7 @@ Then build the speaker-turn-nbest version locally:
 
 Or manually build:
 
-    docker build -f Dockerfile.speaker-turn-nbest -t est-asr-pipeline:speaker-turn-nbest .
+    docker buildx build -f Dockerfile.speaker-turn-nbest -t est-asr-pipeline:speaker-turn-nbest --load .
 
 Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-container-runtime)
 
