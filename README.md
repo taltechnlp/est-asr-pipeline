@@ -17,14 +17,17 @@ Install Nextflow locally (depends on Java 8, refer to official documentation in 
 
     wget -qO- https://get.nextflow.io | bash
 
-Pull the required Docker image, containing models and libraries (recommended):
+Pull the base Docker image first (required for building):
 
+    docker pull europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
 
-    docker pull est-asr-pipeline:speaker-turn-nbest
+Then build the speaker-turn-nbest version locally:
 
-Or build the Docker image locally:
+    ./build-docker.sh
 
-    docker build -t est-asr-pipeline:speaker-turn-nbest .
+Or manually build:
+
+    docker build -f Dockerfile.speaker-turn-nbest -t est-asr-pipeline:speaker-turn-nbest .
 
 Also, install [NVIDIA Container Runtime](https://developer.nvidia.com/nvidia-container-runtime)
 

@@ -1,0 +1,12 @@
+# Extend the original container with speaker-turn-based n-best functionality
+FROM europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
+
+# Copy the speaker-turn-aware script
+COPY bin/whisper-segment-aware.py /opt/est-asr-pipeline/bin/
+RUN chmod +x /opt/est-asr-pipeline/bin/whisper-segment-aware.py
+
+# Install additional required packages (scipy is likely already installed from pure-beam, but ensure it's there)
+RUN pip install scipy
+
+# Verify setup
+RUN python3 -c "import ctranslate2; from faster_whisper import WhisperModel; import scipy.signal; print('Speaker-turn-based n-best ready')"
