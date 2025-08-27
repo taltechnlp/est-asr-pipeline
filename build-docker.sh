@@ -10,9 +10,23 @@ IMAGE_NAME="est-asr-pipeline:speaker-turn-nbest"
 echo "Building Docker image: $IMAGE_NAME"
 echo "This image includes the new speaker-turn-based segmentation with n-best list alignment"
 echo ""
+echo "⚠️  Note: This build may take some time as it downloads conda, models, and dependencies"
+echo "🐳 Starting Docker build process..."
+echo ""
 
 # Build the Docker image
-docker build -t "$IMAGE_NAME" .
+docker build -t "$IMAGE_NAME" . || {
+    echo ""
+    echo "❌ Docker build failed!"
+    echo ""
+    echo "Common issues and solutions:"
+    echo "  1. Check if Docker is running: docker ps"
+    echo "  2. Ensure you have sufficient disk space (>10GB recommended)"
+    echo "  3. If conda TOS issues persist, try: docker system prune"
+    echo "  4. Check Docker logs for specific error details"
+    echo ""
+    exit 1
+}
 
 echo ""
 echo "✅ Docker image built successfully: $IMAGE_NAME"

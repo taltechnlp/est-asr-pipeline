@@ -31,6 +31,12 @@ RUN wget \
 
 RUN conda --version
 
+RUN conda init bash && \
+    conda config --set channel_priority flexible && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    conda tos accept --override-channels --channel conda-forge || echo "conda-forge TOS already accepted or not required"
+
 RUN conda install python=3.9
 
 RUN conda install -c conda-forge pynini=2.1.3
