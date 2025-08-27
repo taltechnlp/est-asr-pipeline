@@ -346,13 +346,13 @@
               {
                 "word_with_punctuation": "eelarve",
                 "start": 29.592,
-                "end": 29.952,
+                "end": 29.922,
                 "word": "eelarve",
                 "punctuation": ""
               },
               {
                 "word_with_punctuation": "kontekstis",
-                "start": 29.952,
+                "start": 29.922,
                 "end": 30.432,
                 "word": "kontekstis",
                 "punctuation": ""
@@ -1637,7 +1637,7 @@
       {
         "type": "speech",
         "start": 119.492,
-        "end": 121.15400000000001
+        "end": 121.137
       },
       {
         "type": "speech",
@@ -2572,7 +2572,7 @@
               },
               {
                 "word_with_punctuation": "eelnõu",
-                "start": 188.925,
+                "start": 188.895,
                 "end": 189.375,
                 "word": "eelnõu",
                 "punctuation": ""
@@ -2960,27 +2960,27 @@
           {
             "rank": 1,
             "text": "Tere õhtust, on kuueteistkümnes mai, kell sai kuus ning Päevakaja võtab kokku tänase päeva tähtsamad uudised, mina olen Reene Leas.",
-            "avg_logprob": -0.009403935633599758
+            "avg_logprob": -0.009494357742369175
           },
           {
             "rank": 2,
             "text": "Tere õhtust, on kuueteistkümnes mai, kell sai kuus, ning Päevakaja võtab kokku tänase päeva tähtsamad uudised, mina olen Reene Leas.",
-            "avg_logprob": -0.042080964893102646
+            "avg_logprob": -0.04183238744735718
           },
           {
             "rank": 3,
             "text": "Tere õhtust, on kuueteistkümnes mai, kell sai kuus ning Päevakaja võtab kokku tänase päeva tähtsamad uudised. Mina olen Reene Leas.",
-            "avg_logprob": -0.05139612406492233
+            "avg_logprob": -0.051468461751937866
           },
           {
             "rank": 4,
             "text": "Tere õhtust, on kuueteistkümnes mai, kell sai kuus, ning Päevakaja võtab kokku tänase päeva tähtsamad uudised. Mina olen Reene Leas.",
-            "avg_logprob": -0.06825283914804459
+            "avg_logprob": -0.06800425797700882
           },
           {
             "rank": 5,
             "text": "Tere õhtust, on kuueteistkümnes mai, kell sai kuus ning Päevakaja võtab kokku tänase päeva tähtsamad uudised, mina olen reene Leas.",
-            "avg_logprob": -0.06951678544282913
+            "avg_logprob": -0.06948061287403107
           }
         ]
       },
@@ -2991,27 +2991,27 @@
           {
             "rank": 1,
             "text": "Valitsus sidus lisaeelarve vastuvõtmise Riigikogus usaldusküsimusega.",
-            "avg_logprob": -0.005296276416629553
+            "avg_logprob": -0.005288401152938604
           },
           {
             "rank": 2,
             "text": "Valitsus sidus lisaeelarve vastuvõtmise riigikogus usaldusküsimusega.",
-            "avg_logprob": -0.08915070444345474
+            "avg_logprob": -0.08908770233392715
           },
           {
             "rank": 3,
             "text": "valitsus sidus lisaeelarve vastuvõtmise Riigikogus usaldusküsimusega.",
-            "avg_logprob": -0.10609879344701767
+            "avg_logprob": -0.10635080933570862
           },
           {
             "rank": 4,
             "text": "Politsei sidus lisaeelarve vastuvõtmise Riigikogus usaldusküsimusega.",
-            "avg_logprob": -0.17278645932674408
+            "avg_logprob": -0.17356771230697632
           },
           {
             "rank": 5,
             "text": "valitsus sidus lisaeelarve vastuvõtmise riigikogus usaldusküsimusega.",
-            "avg_logprob": -0.19140625
+            "avg_logprob": -0.19165827333927155
           }
         ]
       },
@@ -3022,27 +3022,27 @@
           {
             "rank": 1,
             "text": "Surve, et on jaanipäev, peaks mingi asja vastu võtma, mis toob suuri rahalisi püsikulusid.",
-            "avg_logprob": -0.07976973801851273
+            "avg_logprob": -0.07966694235801697
           },
           {
             "rank": 2,
             "text": "Surve, et enne jaanipäeva peaks mingi asja vastu võtma, mis toob suuri rahalisi püsikulusid.",
-            "avg_logprob": -0.08738982677459717
+            "avg_logprob": -0.08743990212678909
           },
           {
             "rank": 3,
             "text": "Surve, et on jaanipäev, on, peaks mingi asja vastu võtma, mis toob suuri rahalisi püsikulusid.",
-            "avg_logprob": -0.095703125
+            "avg_logprob": -0.09560547024011612
           },
           {
             "rank": 4,
             "text": "Surve, et on jaanipäeva, peaks mingi asja vastu võtma, mis toob suuri rahalisi püsikulusid.",
-            "avg_logprob": -0.11217948794364929
+            "avg_logprob": -0.11237980425357819
           },
           {
             "rank": 5,
             "text": "Surve, et on jaanipäev, on, peaks mingi asja vastu võtma, mis toob suuri rahalisi püsikulusid. Aitäh.",
-            "avg_logprob": -0.18519176542758942
+            "avg_logprob": -0.1853693127632141
           }
         ]
       },
@@ -3053,27 +3053,27 @@
           {
             "rank": 1,
             "text": "ilma selle, selle eelarve kontekstis vaatamata, et noh, tegelikult seal ei ole ühtegi põhjust, miks seda teha.",
-            "avg_logprob": -0.18240489065647125
+            "avg_logprob": -0.1820652186870575
           },
           {
             "rank": 2,
             "text": "ilma selle, selle eelarve kontekstis vaatamata, et noh, tegelikult seal ei ole ühtegi põhjust, miks, miks see nii on.",
-            "avg_logprob": -0.21061861515045166
+            "avg_logprob": -0.21045918762683868
           },
           {
             "rank": 3,
             "text": "ilma selle, selle eelarve kontekstis vaatamata, et noh, tegelikult seal ei ole ühtegi põhjust, miks, miks see niimoodi on.",
-            "avg_logprob": -0.23131127655506134
+            "avg_logprob": -0.2311580926179886
           },
           {
             "rank": 4,
             "text": "ilma selle, selle eelarve kontekstis vaatamata, et noh, tegelikult seal ei ole ühtegi põhjust, miks, miks seda teha.",
-            "avg_logprob": -0.23644770681858063
+            "avg_logprob": -0.23628826439380646
           },
           {
             "rank": 5,
             "text": "ilma selle, selle eelarve kontekstis vaatamata, et noh, tegelikult seal ei ole ühtegi põhjust, miks, miks see niimoodi on?",
-            "avg_logprob": -0.2610294222831726
+            "avg_logprob": -0.2607230246067047
           }
         ]
       },
@@ -3084,27 +3084,27 @@
           {
             "rank": 1,
             "text": "Kaja Kallas kordas varem öeldut, et kui Keskerakond võtab enne jaanipäeva peretoetuste eelnõu vastu koos opositsioonihäältega, on praegune koalitsioon lõpetanud töötamise. Keskerakonna esimees Jüri Ratas nimetas Kallase sellist väljaütlemist ultimaatumiks.",
-            "avg_logprob": -0.008990948088467121
+            "avg_logprob": -0.008953387849032879
           },
           {
             "rank": 2,
             "text": "Kaja Kallas kordas varem öeldut, et kui Keskerakond võtab enne jaanipäeva peretoetuste eelnõu vastu koos opositsiooni häältega, on praegune koalitsioon lõpetanud töötamise. Keskerakonna esimees Jüri Ratas nimetas Kallase sellist väljaütlemist ultimaatumiks.",
-            "avg_logprob": -0.009113018400967121
+            "avg_logprob": -0.009108323603868484
           },
           {
             "rank": 3,
             "text": "Kaja Kallas kordas varem öeldut, et kui Keskerakond võtab enne jaanipäeva peretoetuste eelnõu vastu koos opositsioonihäiretega, on praegune koalitsioon lõpetanud töötamise. Keskerakonna esimees Jüri Ratas nimetas Kallase sellist väljaütlemist ultimaatumiks.",
-            "avg_logprob": -0.04281850904226303
+            "avg_logprob": -0.04308142885565758
           },
           {
             "rank": 4,
             "text": "Kaja Kallas kordas varem öeldut, et kui Keskerakond võtab enne jaanipäeva peretoetuste eelnõu vastu koos opositsioonihäärtega, on praegune koalitsioon lõpetanud töötamise. Keskerakonna esimees Jüri Ratas nimetas Kallase sellist väljaütlemist ultimaatumiks.",
-            "avg_logprob": -0.043231669813394547
+            "avg_logprob": -0.04364483058452606
           },
           {
             "rank": 5,
             "text": "Kaja Kallas kordas varem öelnud, et kui Keskerakond võtab enne jaanipäeva peretoetuste eelnõu vastu koos opositsioonihäältega, on praegune koalitsioon lõpetanud töötamise. Keskerakonna esimees Jüri Ratas nimetas Kallase sellist väljaütlemist ultimaatumiks.",
-            "avg_logprob": -0.04556039720773697
+            "avg_logprob": -0.04541015625
           }
         ]
       },
@@ -3115,7 +3115,7 @@
           {
             "rank": 1,
             "text": "Ma arvan, et peaministri poolt välja öeldu, et kui see eelnõu vastu võetakse, et siis see koalitsioon lõpetab, et see ultimaatum ei ole mõistlik.",
-            "avg_logprob": -0.010601496323943138
+            "avg_logprob": -0.010618047788739204
           },
           {
             "rank": 2,
@@ -3130,12 +3130,12 @@
           {
             "rank": 4,
             "text": "ma arvan, et peaministri poolt välja öeldu, et kui see eelnõu vastu võetakse, et siis see koalitsioon lõpetab, et see ultimaatum ei ole mõistlik.",
-            "avg_logprob": -0.056110963225364685
+            "avg_logprob": -0.05601165071129799
           },
           {
             "rank": 5,
             "text": "Ma arvan, et peaministri poolt välja öeldu, et kui see eelnõu vastu võetakse et siis see koalitsioon lõpetab, et see ultimaatum ei ole mõistlik.",
-            "avg_logprob": -0.05899784341454506
+            "avg_logprob": -0.05876212194561958
           }
         ]
       },
@@ -3146,27 +3146,27 @@
           {
             "rank": 1,
             "text": "Ukraina väed jõudsid Harkivi lähedal Venemaa piirini. Brüsselis kogunesid Euroopa Liidu välisministrid, Leedu hinnangul hoiab üks riik ülejäänud liikmeid pantvangis.",
-            "avg_logprob": -0.006395027041435242
+            "avg_logprob": -0.006384095177054405
           },
           {
             "rank": 2,
             "text": "Ukraina väed jõudsid Harki lähedal Venemaa piirini. Brüsselis kogunesid Euroopa Liidu välisministrid, Leedu hinnangul hoiab üks riik ülejäänud liikmeid pantvangis.",
-            "avg_logprob": -0.03460237756371498
+            "avg_logprob": -0.03471898287534714
           },
           {
             "rank": 3,
             "text": "Ukraina väed jõudsid Harkivi lähedal Venemaa piirini. Brüsselis kogunesid Euroopa Liidu välisministrid, Leedu hinnangul hoiab üks riik ülejäänud liikmeid pantvangi.",
-            "avg_logprob": -0.04282078519463539
+            "avg_logprob": -0.04258404299616814
           },
           {
             "rank": 4,
             "text": "Ukraina väed jõudsid Harkivi lähedal Venemaa piirini. Brüsselis kogunesid Euroopa Liidu välisministrid. Leedu hinnangul hoiab üks riik ülejäänud liikmeid pantvangis.",
-            "avg_logprob": -0.05838969349861145
+            "avg_logprob": -0.058564599603414536
           },
           {
             "rank": 5,
             "text": "Ukraina väed jõudsid Harkivi lähedal Venemaa piirini. Brüsselis kogunesid Euroopa liidu välisministrid, Leedu hinnangul hoiab üks riik ülejäänud liikmeid pantvangis.",
-            "avg_logprob": -0.06069263070821762
+            "avg_logprob": -0.060867536813020706
           }
         ]
       },
@@ -3177,12 +3177,12 @@
           {
             "rank": 1,
             "text": "Riigikogu eelarvekontrolli erikomisjoni istungil leiti, et hinnatõusu mõjusid saab leevendada maksusüsteemi korrigeerimise ja CO kahe hinna fikseerimisega.",
-            "avg_logprob": -0.011837121099233627
+            "avg_logprob": -0.011792732402682304
           },
           {
             "rank": 2,
             "text": "Riigikogu eelarvekontrolli erikomisjoni istungil leiti, et hinnatõusu mõjusid saab leevendada maksusüsteemi korrigeerimise ja CO2 hinna fikseerimisega.",
-            "avg_logprob": -0.024489182978868484
+            "avg_logprob": -0.024669470265507698
           },
           {
             "rank": 3,
@@ -3197,7 +3197,7 @@
           {
             "rank": 5,
             "text": "Riigikogu eelarvekontrolli erikomisjoni istungil leiti, et hinnatõusu mõjusid saab leevendada maksusüsteemi korrigeerimise ja CO-kahe hinna fikseerimisega.",
-            "avg_logprob": -0.06576492637395859
+            "avg_logprob": -0.06570662558078766
           }
         ]
       },
@@ -3208,27 +3208,27 @@
           {
             "rank": 1,
             "text": "Kodumaise tomati ja kurgi tootmine on kallinenud mitukümmend protsenti, samas pole võimalik tarbija jaoks hinda tõsta.",
-            "avg_logprob": -0.01416015625
+            "avg_logprob": -0.01418138574808836
           },
           {
             "rank": 2,
             "text": "Kodumaise tomati- ja kurgi tootmine on kallinenud mitukümmend protsenti, samas pole võimalik tarbija jaoks hinda tõsta.",
-            "avg_logprob": -0.09050864726305008
+            "avg_logprob": -0.0904255285859108
           },
           {
             "rank": 3,
             "text": "Kodumaise tomati ja kurgi tootmine on kallinenud mitukümmend protsenti, samas pole võimalik tarbija jaoks hinda tõsta. Toomas Kelt, Tartu.",
-            "avg_logprob": -0.10355113446712494
+            "avg_logprob": -0.10326704382896423
           },
           {
             "rank": 4,
             "text": "Kodumaise tomati ja kurgi tootmine on kallinenud mitukümmend protsenti, samas pole võimalik tarbija jaoks hinda tõsta. Toomas Sild, Tartu.",
-            "avg_logprob": -0.10561079531908035
+            "avg_logprob": -0.10568182170391083
           },
           {
             "rank": 5,
             "text": "Kodumaise tomati ja kurgi tootmine on kallinenud mitukümmend protsenti, samas pole võimalik tarbija jaoks hinda tõsta. Toomas Kelt, Tartu st.",
-            "avg_logprob": -0.13232421875
+            "avg_logprob": -0.1324637234210968
           }
         ]
       },
@@ -3239,7 +3239,7 @@
           {
             "rank": 1,
             "text": "Karl Eduard Schrödi nimelise lastelaule auhinna sai tänavu Indrek Koff raamatuga, Kuhu lapsed said.",
-            "avg_logprob": -0.13426339626312256
+            "avg_logprob": -0.13370536267757416
           },
           {
             "rank": 2,
@@ -3254,12 +3254,12 @@
           {
             "rank": 4,
             "text": "Karl Eduard Schrödi nimelise lastelaule auhinna sai tänavu Indrek Koff raamatuga Kuhu lapsed said.",
-            "avg_logprob": -0.16314338147640228
+            "avg_logprob": -0.16291360557079315
           },
           {
             "rank": 5,
             "text": "Karl Eduard Schrödi nimelise lastelaule auhinna sai tänavu Indrek Koff raamatuga, kuhu lapsed said.",
-            "avg_logprob": -0.16473214328289032
+            "avg_logprob": -0.16372768580913544
           }
         ]
       },
@@ -3275,7 +3275,7 @@
           {
             "rank": 2,
             "text": "Jäähoki maailmameistrivõistlustel Soomes on alanud kolmanda vooru mängud. Läti jahib oma esimest turniirivõitu Norra vastu.",
-            "avg_logprob": -0.051355697214603424
+            "avg_logprob": -0.05139399692416191
           },
           {
             "rank": 3,
@@ -3285,12 +3285,12 @@
           {
             "rank": 4,
             "text": "jäähoki maailmameistrivõistlustel Soomes on alanud kolmanda vooru mängud, Läti jahib oma esimest turniirivõitu Norra vastu.",
-            "avg_logprob": -0.07418045401573181
+            "avg_logprob": -0.07395067065954208
           },
           {
             "rank": 5,
             "text": "Jäähokimaailmameistrivõistlustel Soomes on alanud kolmanda vooru mängud, Läti jahib oma esimest turniirivõitu Norra vastu.",
-            "avg_logprob": -0.0836397036910057
+            "avg_logprob": -0.08371629565954208
           }
         ]
       },
@@ -3301,27 +3301,27 @@
           {
             "rank": 1,
             "text": "Nii öösel kui ka homme päeval võib sadada hoovihma, öösel on sooja kaks kuni seitse kraadi, homme päeval aga seitse kuni kaksteist kraadi.",
-            "avg_logprob": -0.011052912101149559
+            "avg_logprob": -0.011123934760689735
           },
           {
             "rank": 2,
             "text": "nii öösel kui ka homme päeval võib sadada hoovihma, öösel on sooja kaks kuni seitse kraadi, homme päeval aga seitse kuni kaksteist kraadi.",
-            "avg_logprob": -0.037571024149656296
+            "avg_logprob": -0.03746448829770088
           },
           {
             "rank": 3,
             "text": "nii öösel kui ka homme päeval võib sadada hoovihma. Öösel on sooja kaks kuni seitse kraadi, homme päeval aga seitse kuni kaksteist kraadi.",
-            "avg_logprob": -0.05237926170229912
+            "avg_logprob": -0.05195312574505806
           },
           {
             "rank": 4,
             "text": "Nii öösel kui ka homme päeval võib sadada hoovihma. Öösel on sooja kaks kuni seitse kraadi, homme päeval aga seitse kuni kaksteist kraadi.",
-            "avg_logprob": -0.05525568127632141
+            "avg_logprob": -0.05532670393586159
           },
           {
             "rank": 5,
             "text": "Nii öösel kui ka homme päeval võib sadada hoovihma, öösel on sooja kaks kuni seitse kraadi, homme päeval aga seitse kuni kaksteist kraadi. Need oli Eesti Raadio uudised.",
-            "avg_logprob": -0.09067235141992569
+            "avg_logprob": -0.09084990620613098
           }
         ]
       },
@@ -3332,17 +3332,17 @@
           {
             "rank": 1,
             "text": "Valitsus kiitis erakorralisel istungil heaks otsuse siduda lisaeelarve ja sellega seotud kolm, kolme seaduse eelnõu riigikogus enne teist lugemist usaldusküsimusega.",
-            "avg_logprob": -0.015685096383094788
+            "avg_logprob": -0.015625
           },
           {
             "rank": 2,
             "text": "Valitsus kiitis erakorralisel istungil heaks otsuse siduda lisaeelarve ja sellega seotud kolm, kolme seaduse eelnõu Riigikogus enne teist lugemist usaldusküsimusega.",
-            "avg_logprob": -0.024969952180981636
+            "avg_logprob": -0.025135217234492302
           },
           {
             "rank": 3,
             "text": "Valitsus kiitis erakorralisel istungil heaks otsuse siduda lisaeelarve ja sellega seotud kolm, kolme seaduseelnõu riigikogus enne teist lugemist usaldusküsimusega.",
-            "avg_logprob": -0.0259552001953125
+            "avg_logprob": -0.025970458984375
           },
           {
             "rank": 4,
@@ -3352,7 +3352,7 @@
           {
             "rank": 5,
             "text": "Valitsus kiitis erakorralisel istungil heaks otsuse siduda lisaeelarve ja sellega seotud kolm, kolme seaduse eelnõu riigikogus, enne teist lugemist usaldusküsimusega.",
-            "avg_logprob": -0.07120028138160706
+            "avg_logprob": -0.07090435922145844
           }
         ]
       },
@@ -3363,7 +3363,7 @@
           {
             "rank": 1,
             "text": "Valitsus teeb parlamendile ettepaneku arutada eelnõusid Riigikogus ülehomme. EKRE on esitanud lisaeelarvele ja sellega seotud eelnõudele üle kuuesaja muudatusettepaneku, mis võimaldab venitada eelnõude arutelu parlamendis ja blokeerida Riigikogu tavapärase töö.",
-            "avg_logprob": -0.00397304305806756
+            "avg_logprob": -0.003968436736613512
           },
           {
             "rank": 2,
@@ -3373,17 +3373,17 @@
           {
             "rank": 3,
             "text": "Valitsus teeb parlamendil ettepaneku arutada eelnõusid Riigikogus ülehomme. EKRE on esitanud lisaeelarvele ja sellega seotud eelnõudele üle kuuesaja muudatusettepaneku, mis võimaldab venitada eelnõude arutelu parlamendis ja blokeerida Riigikogu tavapärase töö.",
-            "avg_logprob": -0.03379274904727936
+            "avg_logprob": -0.033774323761463165
           },
           {
             "rank": 4,
             "text": "Valitsus teeb parlamendile ettepaneku arutada eelnõusid riigikogus ülehomme. EKRE on esitanud lisaeelarvele ja sellega seotud eelnõudele üle kuuesaja muudatusettepaneku, mis võimaldab venitada eelnõude arutelu parlamendis ja blokeerida Riigikogu tavapärase töö.",
-            "avg_logprob": -0.03434551879763603
+            "avg_logprob": -0.03432709351181984
           },
           {
             "rank": 5,
             "text": "Valitsus teeb parlamendile ettepaneku arutada eelnõusid Riigikogus ülehomme. EKRE on esitanud lisaeelarvele ja sellega seotud eelnõudele üle kuuesaja muudatuse ettepaneku, mis võimaldab venitada eelnõude arutelu parlamendis ja blokeerida Riigikogu tavapärase töö.",
-            "avg_logprob": -0.035795122385025024
+            "avg_logprob": -0.03577686846256256
           }
         ]
       },
@@ -3394,22 +3394,22 @@
           {
             "rank": 1,
             "text": "Kokku on lisaeelarvele ja sellega seotud seaduste eelnõudele esitatud üle seitsmesaja muudatusettepaneku.",
-            "avg_logprob": -0.0062081473879516125
+            "avg_logprob": -0.006173270288854837
           },
           {
             "rank": 2,
             "text": "Kokku on lisaeelarvele ja sellega seotud seaduste eelnõudle esitatud üle seitsmesaja muudatusettepaneku.",
-            "avg_logprob": -0.0807756707072258
+            "avg_logprob": -0.0810546875
           },
           {
             "rank": 3,
             "text": "Kokku on lisaeelarvele ja sellega seotud seaduste eelnõule esitatud üle seitsmesaja muudatusettepaneku.",
-            "avg_logprob": -0.10584984719753265
+            "avg_logprob": -0.10623094439506531
           },
           {
             "rank": 4,
             "text": "Kokku on lisaeelarvele ja sellega seotud seaduseelnõudele esitatud üle seitsmesaja muudatusettepaneku.",
-            "avg_logprob": -0.10861280560493469
+            "avg_logprob": -0.10823170840740204
           },
           {
             "rank": 5,
@@ -3425,12 +3425,12 @@
           {
             "rank": 1,
             "text": "Lisaks riigi selle aasta lisaeelarve seaduseelnõule sidus valitsus usaldusküsimusega ka peretoetuste seaduse muutmise eelnõu.",
-            "avg_logprob": -0.0224609375
+            "avg_logprob": -0.022560587152838707
           },
           {
             "rank": 2,
             "text": "Lisaks riigi selle aasta lisaeelarve seaduse eelnõule sidus valitsus usaldusküsimusega ka peretoetuste seaduse muutmise eelnõu.",
-            "avg_logprob": -0.050507813692092896
+            "avg_logprob": -0.05015625059604645
           },
           {
             "rank": 3,
@@ -3440,7 +3440,7 @@
           {
             "rank": 4,
             "text": "Lisaks riigi selle aasta lisaeelarve seaduse eelnõule, sidus valitsus usaldusküsimusega ka peretoetuste seaduse muutmise eelnõu.",
-            "avg_logprob": -0.06851255893707275
+            "avg_logprob": -0.06847426295280457
           },
           {
             "rank": 5,
@@ -3456,27 +3456,27 @@
           {
             "rank": 1,
             "text": "Peretoetuste tõstmine ja selle ajakava oli arutluse all täna ka Riigikogu sotsiaalkomisjonis. Margitta Otsmaa, Tartu stuudio.",
-            "avg_logprob": -0.04746462404727936
+            "avg_logprob": -0.04750147461891174
           },
           {
             "rank": 2,
             "text": "Peretoetuste tõstmine ja selle ajakava oli arutluse all täna ka Riigikogu sotsiaalkomisjonis. Margitta Otsmaa.",
-            "avg_logprob": -0.06085069477558136
+            "avg_logprob": -0.0607638880610466
           },
           {
             "rank": 3,
             "text": "Peretoetuste tõstmine ja selle ajakava oli arutluse all täna ka Riigikogu sotsiaalkomisjonis. Margitta Otsmaa, Tallinna stuudio.",
-            "avg_logprob": -0.06596403568983078
+            "avg_logprob": -0.0659271851181984
           },
           {
             "rank": 4,
             "text": "Peretoetuste tõstmine ja selle ajakava oli arutluse all täna ka Riigikogu sotsiaalkomisjonis. Margitta Otsmaa tänavad.",
-            "avg_logprob": -0.0684814453125
+            "avg_logprob": -0.068359375
           },
           {
             "rank": 5,
             "text": "Peretoetuste tõstmine ja selle ajakava oli arutluse all täna ka Riigikogu sotsiaalkomisjonis. Margitta Otsmaa, tänan.",
-            "avg_logprob": -0.0744222030043602
+            "avg_logprob": -0.074462890625
           }
         ]
       },
@@ -3487,12 +3487,12 @@
           {
             "rank": 1,
             "text": "Tere hommikust!",
-            "avg_logprob": -0.4852120578289032
+            "avg_logprob": -0.4846540093421936
           },
           {
             "rank": 2,
             "text": "Tervitame teid kõiki sel teemal.",
-            "avg_logprob": -0.5943080186843872
+            "avg_logprob": -0.5920758843421936
           },
           {
             "rank": 3,
@@ -3502,7 +3502,7 @@
           {
             "rank": 4,
             "text": "Aitäh teile.",
-            "avg_logprob": -0.755859375
+            "avg_logprob": -0.7565104365348816
           },
           {
             "rank": 5,
@@ -3518,27 +3518,27 @@
           {
             "rank": 1,
             "text": "Ettepaneku esitajate ehk Keskerakonna, Isamaa, Sotsiaaldemokraatide ja EKRE soov on lastetoetusi tõsta alates veebruarist kaks tuhat kakskümmend kolm ehk koos järgmise aasta eelarvega. Reformierakond on lastetoetuse tõstmise poolt, aga soovib eelnõu arutamiseks aega, sest ettepanek nõuaks ligi kolmsada miljonit täiendavat eurot aastas ja pole selge, kust leida sellele kate. Tegemist on tuleviku püsikuluga ja seda saab katta kas mingi muu püsikulu kärpimise või ärajätmisega või maksutõusudega.",
-            "avg_logprob": -0.011171497404575348
+            "avg_logprob": -0.01114319171756506
           },
           {
             "rank": 2,
             "text": "Ettepaneku esitajate ehk Keskerakonna, Isamaa, Sotsiaaldemokraatide ja EKRE soov on lastetoetusi tõsta alates veebruarist kaks tuhat kakskümmend kolm, ehk koos järgmise aasta eelarvega. Reformierakond on lastetoetuse tõstmise poolt, aga soovib eelnõu arutamiseks aega, sest ettepanek nõuaks ligi kolmsada miljonit täiendavat eurot aastas ja pole selge, kust leida sellele kate. Tegemist on tuleviku püsikuluga ja seda saab katta kas mingi muu püsikulu kärpimise või ärajätmisega või maksutõusudega.",
-            "avg_logprob": -0.01123046875
+            "avg_logprob": -0.011249248869717121
           },
           {
             "rank": 3,
             "text": "Ettepaneku esitajate ehk Keskerakonna, Isamaa, Sotsiaaldemokraatide ja Ekre soov on lastetoetusi tõsta alates veebruarist kaks tuhat kakskümmend kolm, ehk koos järgmise aasta eelarvega. Reformierakond on lastetoetuse tõstmise poolt, aga soovib eelnõu arutamiseks aega, sest ettepanek nõuaks ligi kolmsada miljonit täiendavat eurot aastas ja pole selge, kust leida sellele kate. Tegemist on tuleviku püsikuluga ja seda saab katta kas mingi muu püsikulu kärpimise või ärajätmisega või maksutõusudega.",
-            "avg_logprob": -0.012282151728868484
+            "avg_logprob": -0.012272761203348637
           },
           {
             "rank": 4,
             "text": "Ettepaneku esitajate ehk Keskerakonna, Isamaa, Sotsiaaldemokraatide ja Ekre soov on lastetoetusi tõsta alates veebruarist kaks tuhat kakskümmend kolm ehk koos järgmise aasta eelarvega. Reformierakond on lastetoetuse tõstmise poolt, aga soovib eelnõu arutamiseks aega, sest ettepanek nõuaks ligi kolmsada miljonit täiendavat eurot aastas ja pole selge, kust leida sellele kate. Tegemist on tuleviku püsikuluga ja seda saab katta kas mingi muu püsikulu kärpimise või ärajätmisega või maksutõusudega.",
-            "avg_logprob": -0.012511322274804115
+            "avg_logprob": -0.012454709969460964
           },
           {
             "rank": 5,
             "text": "Ettepaneku esitajate ehk Keskerakonna, Isamaa, Sotsiaaldemokraatide ja EKRE soov on lastetoetusi tõsta alates veebruarist kaks tuhat kakskümmend kolm, ehk koos järgmise aasta eelarvega. Reformierakond on lastetoetuse tõstmise poolt, aga soovib eelnõu arutamiseks aega, sest ettepanek nõuaks ligi kolmsada miljonit täiendavat eurot aastas ja pole selge, kust leida sellele kate. Tegemist on tuleviku püsikuluga ja seda saab katta kas mingi muu püsikulu kärpimise või ärajätmisega või maksutõusudega,",
-            "avg_logprob": -0.049541767686605453
+            "avg_logprob": -0.049579326063394547
           }
         ]
       },
@@ -3549,22 +3549,22 @@
           {
             "rank": 1,
             "text": "Keskfraktsiooni juhi Jaanus Karilaiu sõnul pole see kulu vaid investeering tulevikku, kust raha võetakse või mitte.",
-            "avg_logprob": -0.061742667108774185
+            "avg_logprob": -0.061862245202064514
           },
           {
             "rank": 2,
             "text": "Keskfraktsiooni juhi Jaanus Karilaiu sõnul pole see kulu, vaid investeering tulevikku, kust raha võetakse või mitte.",
-            "avg_logprob": -0.06921874731779099
+            "avg_logprob": -0.06894531100988388
           },
           {
             "rank": 3,
             "text": "Keskfraktsiooni juhi Jaanus Karilaiu sõnul pole see kulu, vaid investeering tulevikku. Kust raha võetakse, võime uurida.",
-            "avg_logprob": -0.08405949175357819
+            "avg_logprob": -0.08420973271131516
           },
           {
             "rank": 4,
             "text": "Keskfraktsiooni juhi Jaanus Karilaiu sõnul pole see kulu, vaid investeering tulevikku. Kust raha võetakse, võime veel küsida.",
-            "avg_logprob": -0.10952240228652954
+            "avg_logprob": -0.10974351316690445
           },
           {
             "rank": 5,

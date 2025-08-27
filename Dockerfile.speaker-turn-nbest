@@ -5,6 +5,9 @@ FROM europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
 COPY bin/whisper-segment-aware.py /opt/est-asr-pipeline/bin/
 RUN chmod +x /opt/est-asr-pipeline/bin/whisper-segment-aware.py
 
+# Copy the modified workflow that uses segment-aware processing
+COPY transcribe.nf /opt/est-asr-pipeline/
+
 # Install additional required packages (scipy is likely already installed from pure-beam, but ensure it's there)
 RUN pip install scipy
 
