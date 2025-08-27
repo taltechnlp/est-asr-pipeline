@@ -35,16 +35,21 @@ RUN conda init bash && \
     conda config --set channel_priority flexible && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
     conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda tos accept --override-channels --channel conda-forge || echo "conda-forge TOS already accepted or not required"
+    (conda tos accept --override-channels --channel conda-forge || echo "conda-forge TOS handled") && \
+    conda install python=3.9
 
-RUN conda install python=3.9
-
-RUN conda install -c conda-forge pynini=2.1.3
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    (conda tos accept --override-channels --channel conda-forge || echo "conda-forge TOS handled") && \
+    conda install -c conda-forge pynini=2.1.3
 
 RUN pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 
 
-RUN conda install ruamel.yaml && \
+RUN conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
+    (conda tos accept --override-channels --channel conda-forge || echo "conda-forge TOS handled") && \
+    conda install ruamel.yaml && \
     pip install kaldiio && \
     pip install simplejson && \
     pip install pytest && \
