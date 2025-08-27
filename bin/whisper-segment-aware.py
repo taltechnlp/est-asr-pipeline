@@ -4,6 +4,7 @@ import argparse
 import json
 import logging
 import sys
+import re
 import numpy as np
 import ctranslate2
 from faster_whisper import WhisperModel
@@ -219,6 +220,8 @@ def get_segment_based_nbest(model_dir, audio_path, segments_datadir, beam_size=5
                                 text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                             except:
                                 pass
+                        # Remove any remaining Whisper language tokens
+                        text = re.sub(r'<\|[a-z]+\|>', '', text).strip()
                     else:
                         token_ids = [int(token) for token in sequence]
                         text = tokenizer.decode(token_ids, skip_special_tokens=True).strip()
@@ -231,6 +234,9 @@ def get_segment_based_nbest(model_dir, audio_path, segments_datadir, beam_size=5
                                 text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                             except:
                                 pass
+                    
+                    # Remove any remaining Whisper language tokens that might leak through
+                    text = re.sub(r'<\|[a-z]+\|>', '', text).strip()
                     
                     chunk_texts[hyp_idx].append(text)
                     chunk_scores[hyp_idx].append(float(score))
