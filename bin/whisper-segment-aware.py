@@ -220,11 +220,26 @@ def get_segment_based_nbest(model_dir, audio_path, segments_datadir, beam_size=5
                                 text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                             except:
                                 pass
+                        
                         # Remove any remaining Whisper language tokens
                         text = re.sub(r'<\|[a-z]+\|>', '', text).strip()
                     else:
                         token_ids = [int(token) for token in sequence]
-                        text = tokenizer.decode(token_ids, skip_special_tokens=True).strip()
+                        
+                        # Skip SOT tokens that were used as prompts
+                        # SOT sequence: [50258, 50302, 50359, 50363]
+                        skip_tokens = len(sot_sequence)
+                        if len(token_ids) > skip_tokens:
+                            # Only decode the actual transcription tokens, not the prompt
+                            transcription_tokens = token_ids[skip_tokens:]
+                            logging.debug(f"Decoding {len(transcription_tokens)} transcription tokens (skipped {skip_tokens} SOT tokens)")
+                        else:
+                            # Fallback if sequence is too short
+                            transcription_tokens = token_ids
+                            logging.warning(f"Sequence too short ({len(token_ids)} tokens), using all tokens")
+                        
+                        text = tokenizer.decode(transcription_tokens, skip_special_tokens=True).strip()
+                        
                         # Fix encoding
                         try:
                             fixed_text = text.encode('latin-1').decode('utf-8')
@@ -234,9 +249,9 @@ def get_segment_based_nbest(model_dir, audio_path, segments_datadir, beam_size=5
                                 text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                             except:
                                 pass
-                    
-                    # Remove any remaining Whisper language tokens that might leak through
-                    text = re.sub(r'<\|[a-z]+\|>', '', text).strip()
+                        
+                        # Remove any remaining Whisper language tokens
+                        text = re.sub(r'<\|[a-z]+\|>', '', text).strip()
                     
                     chunk_texts[hyp_idx].append(text)
                     chunk_scores[hyp_idx].append(float(score))
