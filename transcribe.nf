@@ -486,11 +486,16 @@ process final_output_nbest {
       path show_rttm
       path sid_result
       path alignments_json
+      path alignments_ctm
       path alternatives_json
       path empty_result_txt
 
     output:
       path "result.json"
+      path "result.srt"
+      path "result.trs"
+      path "result.ctm"
+      path "result.txt"
 
     shell:
       '''
@@ -548,6 +553,13 @@ for segment in alternatives_data.get('segments', []):
 with open('result.json', 'w', encoding='utf-8') as f:
     json.dump(final_result, f, indent=2, ensure_ascii=False)
 "
+
+      # Generate other output formats from best result
+      json2trs.py --fid trs best_result.json > result.trs
+      json2srt.py best_result.json > result.srt
+      cat !{alignments_ctm} | perl -npe 's/[.,!?;:]$//' > result.ctm
+      json2text.py < best_result.json > result.txt
+
       '''
 }
 
@@ -589,5 +601,5 @@ workflow {
   decode_whisper(to_wav.out.audio)
   postprocess_whisper_nbest(decode_whisper.out.audio_json)
   align(postprocess_whisper_nbest.out.datadir_whisper, to_wav.out.audio)
-  final_output_nbest(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, postprocess_whisper_nbest.out.alternatives_json, empty_output.out.empty_result_txt)
+  final_output_nbest(to_wav.out.basename, language_id.out.datadir, diarization.out.show_rttm, speaker_id.out.sid_result, align.out.alignments_json, align.out.alignments_ctm, postprocess_whisper_nbest.out.alternatives_json, empty_output.out.empty_result_txt)
 }

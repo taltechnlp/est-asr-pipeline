@@ -162,7 +162,7 @@ def get_pure_beam_search_nbest(model_dir, audio_path, beam_size=5, num_hypothese
                         # If fix fails, keep original but try alternative approach
                         try:
                             # Alternative: fix specific Estonian character sequences
-                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
+                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Åł', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                         except:
                             pass
                 else:
@@ -178,7 +178,7 @@ def get_pure_beam_search_nbest(model_dir, audio_path, beam_size=5, num_hypothese
                         # If fix fails, keep original but try alternative approach
                         try:
                             # Alternative: fix specific Estonian character sequences
-                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
+                            text = text.replace('Ã¤', 'ä').replace('Ã¶', 'ö').replace('Ã¼', 'ü').replace('Ãµ', 'õ').replace('Ã¾', 'ž').replace('Å¡', 'š').replace('Åł', 'š').replace('Ãĸ', 'Ö').replace('Ãľ', 'Ü')
                         except:
                             pass
                 

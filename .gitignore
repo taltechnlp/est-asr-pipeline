@@ -18,4 +18,4 @@ report.html*
 bin/spkid_system
 demo.opus
 .claude
-intekas.mp4
+demo.opus_segments.json
