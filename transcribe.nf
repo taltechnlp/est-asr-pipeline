@@ -35,7 +35,7 @@ process to_wav {
 }
 
 process diarization {
-    memory '5GB'
+    memory params.process_memory
     
     input:
     path audio
@@ -157,7 +157,7 @@ process mfcc {
 }
 
 process speaker_id {
-    memory '5GB'
+    memory params.process_memory
     
     cpus params.nthreads
     
@@ -210,7 +210,7 @@ process speaker_id {
 }
 
 process one_pass_decoding {
-    memory '5GB'  
+    memory params.process_memory  
     cpus params.nthreads
     
     input:
@@ -239,7 +239,7 @@ process one_pass_decoding {
 }
 
 process rnnlm_rescoring {
-    memory '5GB'
+    memory params.process_memory
     
     input:
     path pruned_unk
