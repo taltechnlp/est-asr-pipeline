@@ -19,3 +19,4 @@ bin/spkid_system
 demo.opus
 .claude
 demo.opus_segments.json
+auto_transcribe

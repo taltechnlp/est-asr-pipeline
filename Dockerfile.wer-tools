@@ -1,0 +1,32 @@
+# Dockerfile for WER calculation and comparison tools
+FROM europe-north1-docker.pkg.dev/speech2text-218910/repo/est-asr-pipeline:1.1b
+
+# Install additional Python packages for WER calculation
+RUN pip install estnltk tqdm
+
+# Install SCLITE (NIST Speech Recognition Scoring Toolkit)
+RUN apt-get update && apt-get install -y wget build-essential git
+
+# Clone and install SCLITE from a more reliable source
+WORKDIR /tmp
+RUN git clone https://github.com/usnistgov/SCTK.git && \
+    cd SCTK && \
+    make config && \
+    make all && \
+    make install && \
+    cp bin/* /usr/local/bin/ && \
+    cd / && rm -rf /tmp/SCTK
+
+# Copy WER and comparison scripts
+COPY bin/code_switching_wer.py /opt/est-asr-pipeline/bin/
+COPY bin/trs_ctm_compare.py /opt/est-asr-pipeline/bin/
+RUN chmod +x /opt/est-asr-pipeline/bin/code_switching_wer.py
+RUN chmod +x /opt/est-asr-pipeline/bin/trs_ctm_compare.py
+
+# Verify SCLITE installation
+RUN sclite -h || echo "SCLITE installed but needs arguments"
+
+# Verify Python dependencies
+RUN python3 -c "import estnltk; import tqdm; print('WER tools ready')"
+
+WORKDIR /opt/est-asr-pipeline

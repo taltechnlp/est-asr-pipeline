@@ -4,6 +4,11 @@ nextflow.enable.dsl=2
 params.in_json = ""
 params.in_audio = ""
 params.out_dir = "align_results/"
+params.reference_trs = ""  // Optional TRS file for WER calculation
+params.main_asr_ctm = ""   // Optional Main ASR CTM file
+params.alt_asr_ctm = ""    // Optional Alternative ASR CTM file
+params.calculate_wer = false  // Flag to enable WER calculation
+params.export_comparison = false  // Flag to enable JSON comparison export
 
 process to_wav {
     memory '500MB'
@@ -126,66 +131,123 @@ process output_ctm {
     '''
 }
 
-process reverse_transformations {
-    memory '1GB'
-    cpus 1
+process calculate_wer {
+    memory '4GB'
+    cpus 2
     
     publishDir "${params.out_dir}", mode: 'copy', overwrite: true
     
+    when:
+    params.reference_trs != "" && params.calculate_wer
+    
     input:
-    path alignments_ctm
-    path original_json
-    path datadir_whisper
+    path reference_trs
+    path alt_asr_ctm
+    path main_asr_ctm
+    path agent_ctm
+    val basename
     
     output:
-    path "result_reversed.ctm", emit: reversed_ctm
-    path "transformation_report.json", emit: report
+    path "wer_report.txt"
     
     shell:
     '''
     export LANG=C.UTF-8
     export LC_ALL=C.UTF-8
     
-    # Clean CTM first (same as output_ctm process)
-    cat !{alignments_ctm} | perl -npe 's/[.,!?;:]$//' > cleaned.ctm
+    mkdir -p trs_ref_dir
+    mkdir -p stm_output_dir
     
-    # Apply transformation reversal
-    reverse_ctm_transformations.py \
-        cleaned.ctm \
-        !{original_json} \
-        !{datadir_whisper}/text \
-        --output-ctm result_reversed.ctm \
-        --output-report transformation_report.json
+    # Copy TRS file to directory (script expects directory with .trs files)
+    cp !{reference_trs} trs_ref_dir/
+    TRS_BASENAME=$(basename !{reference_trs} .trs)
+    
+    echo "=== WER Analysis Results ===" > wer_report.txt
+    echo "" >> wer_report.txt
+    
+    # Function to calculate WER for a CTM file
+    calculate_single_wer() {
+        local ctm_file="$1"
+        local system_name="$2"
+        local ctm_filename="$3"
+        
+        if [ "$ctm_file" != "OPTIONAL_FILE" ] && [ -f "$ctm_file" ]; then
+            echo "=== $system_name ===" >> wer_report.txt
+            
+            local ctm_dir="ctm_${ctm_filename}_dir"
+            mkdir -p "$ctm_dir"
+            cp "$ctm_file" "$ctm_dir/${TRS_BASENAME}.ctm"
+            
+            # Fix CTM file ID to match TRS file for SCLITE compatibility
+            if grep -q "^audio" "$ctm_dir/${TRS_BASENAME}.ctm"; then
+                sed "s/^audio/${TRS_BASENAME}/g" "$ctm_dir/${TRS_BASENAME}.ctm" > "$ctm_dir/${TRS_BASENAME}_fixed.ctm"
+                mv "$ctm_dir/${TRS_BASENAME}_fixed.ctm" "$ctm_dir/${TRS_BASENAME}.ctm"
+            fi
+            
+            # Run WER calculation
+            python3 /opt/est-asr-pipeline/bin/code_switching_wer.py \
+                --trs-ref-dir-path trs_ref_dir \
+                --ctm-hyp-dir-path "$ctm_dir" \
+                --stm-ref-dir-path stm_output_dir >> wer_report.txt
+            
+            echo "" >> wer_report.txt
+        else
+            echo "=== $system_name: Not provided ===" >> wer_report.txt
+            echo "" >> wer_report.txt
+        fi
+    }
+    
+    # Calculate WER for all three systems
+    calculate_single_wer "!{alt_asr_ctm}" "Alternative ASR" "alt"
+    calculate_single_wer "!{main_asr_ctm}" "Main ASR" "main"  
+    calculate_single_wer "!{agent_ctm}" "Agent CTM (align.nf output)" "agent"
     '''
 }
 
-process calculate_wer {
-    memory '1GB'
+process export_comparison_json {
+    memory '2GB'
     cpus 1
     
     publishDir "${params.out_dir}", mode: 'copy', overwrite: true
     
+    when:
+    params.reference_trs != "" && params.export_comparison
+    
     input:
-    path original_ctm
-    path reversed_ctm
-    path original_json
+    path reference_trs
+    path alt_asr_ctm
+    path main_asr_ctm
+    path agent_ctm
+    val basename
     
     output:
-    path "wer_comparison.txt"
+    path "comparison.json"
     
     shell:
     '''
     export LANG=C.UTF-8
     export LC_ALL=C.UTF-8
     
-    # Calculate WER for both versions
-    calculate_wer.py \
-        --reference !{original_json} \
-        --hypothesis-original !{original_ctm} \
-        --hypothesis-reversed !{reversed_ctm} \
-        > wer_comparison.txt
+    # Handle optional CTM files by creating empty ones if not provided
+    ALT_CTM="!{alt_asr_ctm}"
+    MAIN_CTM="!{main_asr_ctm}"
+    
+    # Create empty CTM files for missing inputs
+    if [ "$ALT_CTM" = "OPTIONAL_FILE" ]; then
+        touch empty_alt.ctm
+        ALT_CTM="empty_alt.ctm"
+    fi
+    
+    if [ "$MAIN_CTM" = "OPTIONAL_FILE" ]; then
+        touch empty_main.ctm
+        MAIN_CTM="empty_main.ctm"
+    fi
+    
+    # Run comparison using trs_ctm_compare.py
+    python3 /opt/est-asr-pipeline/bin/trs_ctm_compare.py !{reference_trs} "$ALT_CTM" "$MAIN_CTM" !{agent_ctm} comparison.json
     '''
 }
+
 
 workflow {
     json_file = Channel.fromPath(params.in_json)
@@ -196,16 +258,37 @@ workflow {
     align(create_datadir_from_json.out.datadir_whisper, to_wav.out.audio)
     output_ctm(to_wav.out.basename, align.out.alignments_ctm)
     
-    // New processes for transformation reversal and WER comparison
-    reverse_transformations(
-        align.out.alignments_ctm,
-        json_file,
-        create_datadir_from_json.out.datadir_whisper
-    )
+    // Optional WER calculation
+    if (params.reference_trs != "" && params.calculate_wer) {
+        reference_trs_file = Channel.fromPath(params.reference_trs)
+        
+        // Handle optional CTM files for WER calculation
+        alt_ctm_file = params.alt_asr_ctm != "" ? Channel.fromPath(params.alt_asr_ctm) : Channel.value("OPTIONAL_FILE")
+        main_ctm_file = params.main_asr_ctm != "" ? Channel.fromPath(params.main_asr_ctm) : Channel.value("OPTIONAL_FILE")
+        
+        calculate_wer(
+            reference_trs_file, 
+            alt_ctm_file, 
+            main_ctm_file, 
+            align.out.alignments_ctm, 
+            to_wav.out.basename
+        )
+    }
     
-    calculate_wer(
-        output_ctm.out,
-        reverse_transformations.out.reversed_ctm,
-        json_file
-    )
+    // Optional JSON comparison export
+    if (params.reference_trs != "" && params.export_comparison) {
+        reference_trs_file = Channel.fromPath(params.reference_trs)
+        
+        // Handle optional CTM files
+        alt_ctm_file = params.alt_asr_ctm != "" ? Channel.fromPath(params.alt_asr_ctm) : Channel.value("OPTIONAL_FILE")
+        main_ctm_file = params.main_asr_ctm != "" ? Channel.fromPath(params.main_asr_ctm) : Channel.value("OPTIONAL_FILE")
+        
+        export_comparison_json(
+            reference_trs_file, 
+            alt_ctm_file, 
+            main_ctm_file, 
+            align.out.alignments_ctm, 
+            to_wav.out.basename
+        )
+    }
 }
